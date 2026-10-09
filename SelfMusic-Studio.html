@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SelfMusic Studio — Suno & KIE.AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#16131d; --panel:#1f1b29; --panel2:#272235; --line:#34304a;
+  --text:#ece9f5; --muted:#9a95b3; --accent:#ff6b8b; --accent2:#5ad1c4;
+  --ok:#5ad19a; --err:#ff7a7a; --warn:#f5c26b;
+  --head:'Bricolage Grotesque','Trebuchet MS',sans-serif;
+  --body:'DM Sans','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 var(--body);display:flex}
+a{color:var(--accent2)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+
+/* Sidebar */
+aside{width:250px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;overflow-y:auto;height:100vh;position:sticky;top:0}
+.brand{padding:4px 10px 16px}
+.brand-logo{display:block;width:100%;height:auto;margin-bottom:10px;border-radius:8px;background:#fff}
+.brand h1{font:700 22px var(--head);margin:0;letter-spacing:-.3px}
+.brand small{color:var(--muted)}
+.grp{margin:14px 10px 4px;color:var(--muted);font-size:12px}
+.nav{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text)}
+.nav:hover{background:var(--panel2)}
+.nav.on{background:var(--accent);color:#2a0d16;font-weight:600}
+.burger{display:none}
+
+/* Main */
+main{flex:1;min-width:0;height:100vh;overflow-y:auto;padding:26px clamp(16px,4vw,44px) 60px}
+.view{display:none;max-width:860px}
+.view.on{display:block}
+h2{font:700 28px var(--head);margin:0 0 4px;letter-spacing:-.4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+label{display:block;font-weight:500;margin:12px 0 4px}
+label small{color:var(--muted);font-weight:400}
+input[type=text],input[type=password],input[type=url],input[type=number],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+textarea{min-height:110px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chk{display:flex;gap:8px;align-items:center;margin:12px 0;font-weight:400}
+.chk input{width:auto}
+.btn{background:var(--accent);color:#2a0d16;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sec{background:var(--panel2);color:var(--text);border:1px solid var(--line);font-weight:500}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.danger{background:none;border:1px solid var(--err);color:var(--err)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
+.seg button{background:none;border:0;padding:7px 14px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--accent2);color:#07302b;font-weight:600}
+.hint{background:var(--panel2);border-left:3px solid var(--accent2);padding:9px 12px;border-radius:6px;color:var(--muted);font-size:14px;margin:10px 0}
+.status{margin-top:14px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font-size:14px}
+.status.ok{border-color:var(--ok)} .status.err{border-color:var(--err)} .status.wait{border-color:var(--warn)}
+.tracks{display:grid;gap:12px;margin-top:14px}
+.track{display:grid;grid-template-columns:84px 1fr;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.track img{width:84px;height:84px;border-radius:8px;object-fit:cover;background:var(--panel2)}
+.track h4{margin:0;font:600 16px var(--body)}
+.track .meta{color:var(--muted);font-size:13px;margin-bottom:6px;word-break:break-all}
+.track audio{width:100%;height:36px}
+.track .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font:700 24px var(--head)}
+.stat span{color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tag{display:inline-block;border-radius:6px;padding:1px 7px;font-size:12px;background:var(--panel2)}
+.tag.ok{color:var(--ok)} .tag.err{color:var(--err)} .tag.off{color:var(--warn)}
+.scroll{overflow-x:auto}
+#log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:420px;overflow:auto;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}
+.lyr{white-space:pre-wrap;line-height:1.8;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px;max-height:380px;overflow:auto}
+.hide{display:none!important}
+#toast{position:fixed;right:18px;bottom:18px;background:var(--panel2);border:1px solid var(--line);padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:9}
+#toast.on{opacity:1;transform:none}
+
+@media(max-width:820px){
+  body{display:block}
+  aside{position:fixed;inset:0 auto 0 0;z-index:5;transform:translateX(-100%);transition:transform .2s;box-shadow:6px 0 24px #0008}
+  aside.open{transform:none}
+  main{height:auto;padding-top:64px}
+  .burger{display:block;position:fixed;top:12px;left:12px;z-index:6;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .row{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<button class="burger" id="burger" aria-label="Buka menu">☰ Menu</button>
+
+<aside id="side">
+  <div class="brand"><img class="brand-logo" src="Asset/Logo.jpeg" alt="SelfMusic Studio"><small>SunoAPI.org &amp; KIE.AI</small></div>
+  <div class="grp">Generate</div>
+  <button class="nav on" data-v="gen">Generate musik</button>
+  <button class="nav" data-v="cover">Upload &amp; cover</button>
+  <div class="grp">Alat</div>
+  <button class="nav" data-v="video">Buat video MP4</button>
+  <button class="nav" data-v="wav">Convert ke WAV</button>
+  <button class="nav" data-v="lyrics">Ambil lirik</button>
+  <button class="nav" data-v="check">Cek status task</button>
+  <div class="grp">Pengaturan</div>
+  <button class="nav" data-v="keys">Multi API key</button>
+  <div class="grp">Library</div>
+  <button class="nav" data-v="history">Riwayat</button>
+  <div class="grp">Debug</div>
+  <button class="nav" data-v="genlog">Log generate</button>
+  <button class="nav" data-v="activity">Log aktivitas</button>
+</aside>
+
+<main>
+<!-- GENERATE -->
+<section class="view on" id="v-gen">
+  <h2>Generate musik</h2>
+  <p class="sub">Buat lagu dari deskripsi atau lirik kamu sendiri.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <label>Mode</label>
+    <select id="g-mode">
+      <option value="0">Non-custom — hanya deskripsi, lirik dibuat otomatis</option>
+      <option value="1">Custom — prompt jadi lirik, wajib isi style dan judul</option>
+    </select>
+    <label id="g-plabel">Deskripsi lagu <small>(maks 500 karakter)</small></label>
+    <textarea id="g-prompt" placeholder="Contoh: lagu pop akustik tentang hujan sore di kota kecil"></textarea>
+    <div id="g-custom" class="hide">
+      <div class="row">
+        <div><label>Style / genre</label><input type="text" id="g-style" placeholder="indie folk, female vocal, warm"></div>
+        <div><label>Judul track</label><input type="text" id="g-title" maxlength="80"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Model</label>
+        <select id="g-model">
+          <option>V5</option><option>V4_5PLUS</option><option selected>V4_5ALL</option><option>V4_5</option><option>V4</option>
+        </select></div>
+      <div><label>Vokal <small>(opsional)</small></label>
+        <select id="g-vocal"><option value="">Tidak ditentukan</option><option value="m">Pria</option><option value="f">Wanita</option></select></div>
+    </div>
+    <label>Negative tags <small>(opsional)</small></label>
+    <input type="text" id="g-neg" placeholder="heavy metal, screaming">
+    <label class="chk"><input type="checkbox" id="g-inst"> Instrumental, tanpa vokal</label>
+    <div class="bar"><button class="btn" id="g-go">Generate musik</button></div>
+    <div class="status hide" id="g-status"></div>
+    <div class="tracks" id="g-tracks"></div>
+  </div>
+</section>
+
+<!-- COVER -->
+<section class="view" id="v-cover">
+  <h2>Upload &amp; cover</h2>
+  <p class="sub">Ubah lagu yang sudah ada menjadi gaya baru. Audio sumber harus berupa URL publik.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <label>URL audio sumber</label>
+    <input type="url" id="c-url" placeholder="https://.../lagu.mp3">
+    <div class="hint">Untuk file lokal, unggah dulu ke layanan hosting file (mis. Catbox, Cloudinary, Supabase Storage), lalu tempel URL-nya di sini.</div>
+    <div class="row">
+      <div><label>Model</label>
+        <select id="c-model"><option>V5</option><option>V4_5PLUS</option><option selected>V4_5ALL</option><option>V4_5</option><option>V4</option></select></div>
+      <div><label>Mode lirik</label>
+        <select id="c-lmode">
+          <option value="auto">Otomatis — lirik dari Suno</option>
+          <option value="describe">Deskripsi — aku jelaskan arahnya</option>
+          <option value="custom">Custom — lirikku sendiri</option>
+        </select></div>
+    </div>
+    <div class="row">
+      <div><label>Style / genre</label><input type="text" id="c-style" placeholder="lo-fi jazz, mellow"></div>
+      <div><label>Judul track</label><input type="text" id="c-title" maxlength="80"></div>
+    </div>
+    <div id="c-textwrap" class="hide">
+      <label id="c-tlabel">Deskripsi cover</label>
+      <textarea id="c-text"></textarea>
+    </div>
+    <label class="chk"><input type="checkbox" id="c-inst"> Instrumental, tanpa vokal</label>
+    <div class="bar"><button class="btn" id="c-go">Generate cover</button></div>
+    <div class="status hide" id="c-status"></div>
+    <div class="tracks" id="c-tracks"></div>
+  </div>
+</section>
+
+<!-- VIDEO -->
+<section class="view" id="v-video">
+  <h2>Buat video MP4</h2>
+  <p class="sub">Ubah track hasil generate menjadi video dengan visualizer.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <div class="row">
+      <div><label>Task ID</label><input type="text" id="vd-task"></div>
+      <div><label>Audio ID</label><input type="text" id="vd-audio"></div>
+    </div>
+    <div class="row">
+      <div><label>Nama artis <small>(opsional)</small></label><input type="text" id="vd-author" maxlength="50"></div>
+      <div><label>Domain / watermark <small>(opsional)</small></label><input type="text" id="vd-domain" maxlength="50"></div>
+    </div>
+    <div class="bar"><button class="btn" id="vd-go">Buat video</button></div>
+    <div class="status hide" id="vd-status"></div>
+    <div id="vd-out"></div>
+  </div>
+</section>
+
+<!-- WAV -->
+<section class="view" id="v-wav">
+  <h2>Convert ke WAV</h2>
+  <p class="sub">Ubah track jadi WAV tanpa kompresi. Tombol “WAV” di hasil track mengisi form ini otomatis.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <div class="row">
+      <div><label>Task ID</label><input type="text" id="w-task"></div>
+      <div><label>Audio ID</label><input type="text" id="w-audio"></div>
+    </div>
+    <div class="bar"><button class="btn" id="w-go">Convert ke WAV</button><button class="btn sec" id="w-stop">Stop</button></div>
+    <div class="status hide" id="w-status"></div>
+    <div id="w-out"></div>
+  </div>
+</section>
+
+<!-- LYRICS -->
+<section class="view" id="v-lyrics">
+  <h2>Ambil lirik</h2>
+  <p class="sub">Ambil lirik dengan timestamp dari track yang sudah jadi.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <div class="row">
+      <div><label>Task ID</label><input type="text" id="l-task"></div>
+      <div><label>Audio ID</label><input type="text" id="l-audio"></div>
+    </div>
+    <div class="bar"><button class="btn" id="l-go">Ambil lirik</button><button class="btn sec" id="l-copy">Salin lirik</button></div>
+    <div class="status hide" id="l-status"></div>
+    <div class="lyr hide" id="l-out"></div>
+  </div>
+</section>
+
+<!-- CHECK -->
+<section class="view" id="v-check">
+  <h2>Cek status task</h2>
+  <p class="sub">Periksa progres musik, cover, atau video dengan Task ID.</p>
+  <div class="card">
+    <div class="seg" data-prov-seg></div>
+    <div class="row">
+      <div><label>Task ID</label><input type="text" id="k-task"></div>
+      <div><label>Jenis task</label>
+        <select id="k-type"><option value="music">Musik / cover</option><option value="video">Video MP4</option><option value="wav">WAV</option></select></div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="k-once">Cek sekali</button>
+      <button class="btn sec" id="k-auto">Auto cek tiap 10 detik</button>
+      <button class="btn sec" id="k-stop">Stop</button>
+    </div>
+    <div class="status hide" id="k-status"></div>
+    <div class="tracks" id="k-tracks"></div>
+  </div>
+</section>
+
+<!-- KEYS -->
+<section class="view" id="v-keys">
+  <h2>Multi API key</h2>
+  <p class="sub">Simpan banyak key sekaligus. Semua key tersimpan hanya di browser kamu (localStorage).</p>
+  <div class="card">
+    <div class="row">
+      <div><label>Provider</label>
+        <select id="ky-prov"><option value="suno">SunoAPI.org</option><option value="kie">KIE.AI</option></select></div>
+      <div><label>Label <small>(opsional)</small></label><input type="text" id="ky-label" placeholder="akun utama"></div>
+    </div>
+    <label>API key <small>(satu key per baris)</small></label>
+    <textarea id="ky-keys" style="min-height:80px" placeholder="tempel key di sini"></textarea>
+    <div class="bar"><button class="btn" id="ky-add">Simpan key</button></div>
+  </div>
+  <div class="card">
+    <label style="margin-top:0">Cara memakai key</label>
+    <select id="ky-mode">
+      <option value="rr">Bergiliran — tiap request pakai key berikutnya</option>
+      <option value="fo">Failover — pakai key teratas, pindah kalau gagal</option>
+      <option value="man">Manual — hanya key yang dipilih</option>
+    </select>
+    <div class="hint">Key yang ditolak (401) atau kreditnya habis (402) otomatis dinonaktifkan, lalu request dicoba ulang dengan key lain.</div>
+  </div>
+  <div class="card">
+    <div class="bar" style="margin-top:0">
+      <button class="btn sec sm" id="ky-reset">Reset statistik</button>
+      <button class="btn sec sm" id="ky-export">Ekspor</button>
+      <button class="btn sec sm" id="ky-import">Impor</button>
+      <input type="file" id="ky-file" accept=".json" class="hide">
+    </div>
+    <div class="scroll"><table><thead><tr><th>Pakai</th><th>Provider</th><th>Label</th><th>Key</th><th>Status</th><th>Sukses</th><th>Gagal</th><th></th></tr></thead><tbody id="ky-list"></tbody></table></div>
+  </div>
+  <div class="card">
+    <label style="margin-top:0">Alamat API <small>(ubah hanya jika memakai proxy sendiri)</small></label>
+    <div class="row">
+      <div><small>SunoAPI.org</small><input type="text" id="base-suno"></div>
+      <div><small>KIE.AI</small><input type="text" id="base-kie"></div>
+    </div>
+    <div class="bar"><button class="btn sec sm" id="base-save">Simpan alamat</button><button class="btn sec sm" id="base-reset">Kembalikan default</button></div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section class="view" id="v-history">
+  <h2>Riwayat</h2>
+  <p class="sub">Track hasil generate dan cover tersimpan di browser ini. Link audio dari provider bisa kedaluwarsa, jadi unduh yang penting.</p>
+  <div class="bar" style="margin:0 0 8px"><button class="btn sec sm" id="h-refresh">Muat ulang</button><button class="btn danger sm" id="h-clear">Hapus semua</button></div>
+  <div class="tracks" id="h-list"></div>
+</section>
+
+<!-- GEN LOG -->
+<section class="view" id="v-genlog">
+  <h2>Log generate</h2>
+  <p class="sub">Setiap request tercatat: berhasil atau gagal, key yang dipakai, kode error, dan Task ID.</p>
+  <div class="stats" id="gl-stats"></div>
+  <div class="bar" style="margin:0 0 10px">
+    <select id="gl-status" style="width:auto"><option value="">Semua status</option><option value="ok">Hanya sukses</option><option value="err">Hanya gagal</option></select>
+    <select id="gl-prov" style="width:auto"><option value="">Semua provider</option><option value="suno">SunoAPI.org</option><option value="kie">KIE.AI</option></select>
+    <button class="btn sec sm" id="gl-csv">Ekspor CSV</button>
+    <button class="btn danger sm" id="gl-clear">Hapus semua</button>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Waktu</th><th>Provider</th><th>Jenis</th><th>Key</th><th>Hasil</th><th>Task ID</th><th>Keterangan</th></tr></thead><tbody id="gl-body"></tbody></table></div>
+</section>
+
+<!-- ACTIVITY -->
+<section class="view" id="v-activity">
+  <h2>Log aktivitas</h2>
+  <p class="sub">Semua panggilan API dan perubahan status.</p>
+  <div class="bar" style="margin:0 0 10px"><button class="btn danger sm" id="ac-clear">Bersihkan</button></div>
+  <div id="log"></div>
+</section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+};
+const DEFAULT_BASE={suno:'https://api.sunoapi.org',kie:'https://api.kie.ai'};
+const PNAME={suno:'SunoAPI.org',kie:'KIE.AI'};
+const CB='https://example.com/callback'; // wajib diisi oleh API, hasil diambil lewat polling
+
+let keys=store.get('ms_keys',[]), mode=store.get('ms_mode','rr'), manualId=store.get('ms_manual',null);
+let bases=Object.assign({},DEFAULT_BASE,store.get('ms_bases',{}));
+let provider=store.get('ms_prov','suno'), rr={suno:0,kie:0};
+let history_=store.get('ms_history',[]), genlog=store.get('ms_genlog',[]);
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2200)}
+function log(m,type){const el=$('#log');const d=document.createElement('div');
+  d.style.color=type==='err'?'var(--err)':type==='ok'?'var(--ok)':'inherit';
+  d.textContent='['+new Date().toLocaleTimeString('id-ID')+'] '+m;el.prepend(d)}
+function setStatus(sel,msg,type){const e=$(sel);e.className='status '+(type||'');e.textContent=msg;if(!msg)e.classList.add('hide')}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const maskKey=k=>k.length>10?k.slice(0,4)+'…'+k.slice(-4):'••••';
+
+/* ---------- Navigation ---------- */
+function go(v){
+  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  $$('.nav').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  $('#side').classList.remove('open');
+  $('main').scrollTop=0;
+  if(v==='history')renderHistory(); if(v==='genlog')renderGenLog(); if(v==='keys')renderKeys();
+}
+$$('.nav').forEach(b=>b.onclick=()=>go(b.dataset.v));
+$('#burger').onclick=()=>$('#side').classList.toggle('open');
+
+/* ---------- Provider switch ---------- */
+function buildSeg(){
+  $$('[data-prov-seg]').forEach(seg=>{
+    seg.innerHTML=Object.keys(PNAME).map(p=>`<button data-p="${p}" class="${p===provider?'on':''}">${PNAME[p]}</button>`).join('');
+    seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{provider=b.dataset.p;store.set('ms_prov',provider);buildSeg()});
+  });
+}
+
+/* ---------- Keys ---------- */
+const saveKeys=()=>store.set('ms_keys',keys);
+function pickKey(p,tried){
+  const pool=keys.filter(k=>k.provider===p&&!k.disabled&&!tried.has(k.id));
+  if(!pool.length)return null;
+  if(mode==='man'){return pool.find(k=>k.id===manualId)||null}
+  if(mode==='fo')return pool[0];
+  rr[p]=(rr[p]+1)%pool.length;return pool[rr[p]];
+}
+function renderKeys(){
+  $('#ky-mode').value=mode;
+  $('#base-suno').value=bases.suno;$('#base-kie').value=bases.kie;
+  const tb=$('#ky-list');
+  if(!keys.length){tb.innerHTML='<tr><td colspan="8" style="color:var(--muted)">Belum ada key. Tambahkan key di atas untuk mulai.</td></tr>';return}
+  tb.innerHTML=keys.map(k=>`<tr>
+    <td><input type="radio" name="manual" ${k.id===manualId?'checked':''} data-man="${k.id}" ${mode!=='man'?'disabled':''} aria-label="Pakai key ini"></td>
+    <td>${PNAME[k.provider]}</td><td>${esc(k.label||'-')}</td><td><code>${esc(maskKey(k.key))}</code></td>
+    <td>${k.disabled?'<span class="tag off">nonaktif</span>':'<span class="tag ok">aktif</span>'}</td>
+    <td>${k.ok||0}</td><td>${k.fail||0}</td>
+    <td style="white-space:nowrap"><button class="btn sec sm" data-tog="${k.id}">${k.disabled?'Aktifkan':'Matikan'}</button> <button class="btn danger sm" data-del="${k.id}">Hapus</button></td></tr>`).join('');
+  tb.querySelectorAll('[data-man]').forEach(r=>r.onchange=()=>{manualId=r.dataset.man;store.set('ms_manual',manualId)});
+  tb.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{const k=keys.find(x=>x.id===b.dataset.tog);k.disabled=!k.disabled;saveKeys();renderKeys()});
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{keys=keys.filter(x=>x.id!==b.dataset.del);saveKeys();renderKeys()});
+}
+$('#ky-add').onclick=()=>{
+  const lines=$('#ky-keys').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length)return toast('Tempel minimal satu key.');
+  const p=$('#ky-prov').value,lb=$('#ky-label').value.trim();
+  lines.forEach((key,i)=>{ if(!keys.some(k=>k.key===key&&k.provider===p))
+    keys.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+i),provider:p,label:lb?(lines.length>1?lb+' '+(i+1):lb):'',key,disabled:false,ok:0,fail:0})});
+  saveKeys();$('#ky-keys').value='';renderKeys();toast(lines.length+' key diproses.');
+};
+$('#ky-mode').onchange=e=>{mode=e.target.value;store.set('ms_mode',mode);renderKeys()};
+$('#ky-reset').onclick=()=>{keys.forEach(k=>{k.ok=0;k.fail=0;k.disabled=false});saveKeys();renderKeys()};
+$('#ky-export').onclick=()=>download('music-studio-keys.json',JSON.stringify(keys,null,2),'application/json');
+$('#ky-import').onclick=()=>$('#ky-file').click();
+$('#ky-file').onchange=async e=>{try{const arr=JSON.parse(await e.target.files[0].text());
+  arr.forEach(k=>{if(k.key&&k.provider&&!keys.some(x=>x.key===k.key))keys.push(Object.assign({id:crypto.randomUUID(),ok:0,fail:0,disabled:false},k))});
+  saveKeys();renderKeys();toast('Impor selesai.')}catch{toast('File tidak valid.')}};
+$('#base-save').onclick=()=>{bases={suno:$('#base-suno').value.trim().replace(/\/$/,''),kie:$('#base-kie').value.trim().replace(/\/$/,'')};store.set('ms_bases',bases);toast('Alamat disimpan.')};
+$('#base-reset').onclick=()=>{bases={...DEFAULT_BASE};store.set('ms_bases',{});renderKeys()};
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+
+/* ---------- API call ---------- */
+async function api(p,method,path,body,kind){
+  const tried=new Set();
+  for(;;){
+    const k=pickKey(p,tried);
+    if(!k)throw new Error('Tidak ada API key aktif untuk '+PNAME[p]+'. Tambahkan atau aktifkan key di menu Multi API key.');
+    tried.add(k.id);
+    log(method+' '+PNAME[p]+path+' (key: '+(k.label||maskKey(k.key))+')');
+    let res,json;
+    try{
+      res=await fetch(bases[p]+path,{method,headers:{'Authorization':'Bearer '+k.key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+      json=await res.json().catch(()=>({}));
+    }catch(e){
+      log('Gagal terhubung: '+e.message,'err');
+      throw new Error('Tidak bisa terhubung ke API ('+e.message+'). Jika browser memblokir request (CORS), jalankan lewat proxy sendiri dan isi alamat API di menu Multi API key.');
+    }
+    const code=Number(json.code||res.status);
+    if(code===401||code===402){
+      k.disabled=true;k.fail=(k.fail||0)+1;saveKeys();
+      log('Key '+(k.label||maskKey(k.key))+' dinonaktifkan ('+code+'): '+(json.msg||''),'err');
+      addGenLog({provider:p,kind:kind||path,key:k.label||maskKey(k.key),ok:false,code,msg:json.msg||explain(code)});
+      if(mode==='man')throw new Error(explain(code));
+      continue;
+    }
+    if(code!==200){
+      k.fail=(k.fail||0)+1;saveKeys();
+      addGenLog({provider:p,kind:kind||path,key:k.label||maskKey(k.key),ok:false,code,msg:json.msg||''});
+      throw new Error('['+code+'] '+(json.msg||'Request gagal.'));
+    }
+    k.ok=(k.ok||0)+1;saveKeys();
+    return {data:json.data||{},key:k};
+  }
+}
+function explain(x){
+  const m={401:'API key ditolak. Periksa key atau ganti dengan yang lain.',402:'Kredit habis. Isi ulang kredit atau pakai key lain.',
+   SENSITIVE_WORD_ERROR:'Lirik atau prompt mengandung kata sensitif atau materi berhak cipta. Ubah liriknya lalu coba lagi.',
+   CREATE_TASK_FAILED:'Task gagal dibuat. Coba kirim ulang.',GENERATE_AUDIO_FAILED:'Pembuatan audio gagal. Coba lagi dengan prompt berbeda.',
+   CALLBACK_EXCEPTION:'Provider gagal mengirim hasil. Cek lagi sebentar.',PENDING:'Menunggu antrean.',TEXT_SUCCESS:'Lirik selesai, audio sedang dibuat.',
+   FIRST_SUCCESS:'Track pertama selesai, track kedua menyusul.',SUCCESS:'Selesai.'};
+  return m[x]||String(x);
+}
+
+/* ---------- Gen log ---------- */
+function addGenLog(e){e.t=Date.now();genlog.unshift(e);genlog=genlog.slice(0,300);store.set('ms_genlog',genlog);}
+function updateGenLog(taskId,patch){const e=genlog.find(x=>x.taskId===taskId);if(e){Object.assign(e,patch);store.set('ms_genlog',genlog)}}
+function renderGenLog(){
+  const s=$('#gl-status').value,p=$('#gl-prov').value;
+  const rows=genlog.filter(e=>(!s||(s==='ok')===!!e.ok)&&(!p||e.provider===p));
+  const ok=genlog.filter(e=>e.ok).length;
+  $('#gl-stats').innerHTML=`<div class="stat"><b>${genlog.length}</b><span>Total</span></div><div class="stat"><b style="color:var(--ok)">${ok}</b><span>Sukses</span></div><div class="stat"><b style="color:var(--err)">${genlog.length-ok}</b><span>Gagal</span></div>`;
+  $('#gl-body').innerHTML=rows.length?rows.map(e=>`<tr><td>${new Date(e.t).toLocaleString('id-ID')}</td><td>${PNAME[e.provider]}</td><td>${esc(e.kind)}</td><td>${esc(e.key||'-')}</td>
+   <td><span class="tag ${e.ok?'ok':'err'}">${e.ok?'sukses':'gagal'}${e.code?' · '+esc(e.code):''}</span></td><td><code>${esc(e.taskId||'-')}</code></td><td>${esc(e.msg||'')}</td></tr>`).join(''):'<tr><td colspan="7" style="color:var(--muted)">Belum ada catatan.</td></tr>';
+}
+$('#gl-status').onchange=$('#gl-prov').onchange=renderGenLog;
+$('#gl-clear').onclick=()=>{genlog=[];store.set('ms_genlog',genlog);renderGenLog()};
+$('#gl-csv').onclick=()=>{const h='waktu,provider,jenis,key,hasil,kode,taskId,keterangan\n';
+  download('log-generate.csv',h+genlog.map(e=>[new Date(e.t).toISOString(),e.provider,e.kind,e.key,e.ok?'sukses':'gagal',e.code||'',e.taskId||'',(e.msg||'').replace(/"/g,'""')].map(v=>`"${v}"`).join(',')).join('\n'),'text/csv')};
+$('#ac-clear').onclick=()=>$('#log').innerHTML='';
+
+/* ---------- Polling ---------- */
+const pollers={};
+async function poll(id,fn,interval=8000,max=90){
+  pollers[id]=(pollers[id]||0)+1;const me=pollers[id];
+  for(let i=1;i<=max;i++){
+    if(pollers[id]!==me)return 'stopped';
+    const r=await fn(i);
+    if(r)return r;
+    await sleep(interval);
+  }
+  return 'timeout';
+}
+const stopPoll=id=>{pollers[id]=(pollers[id]||0)+1};
+
+/* ---------- Track rendering ---------- */
+function renderTracks(box,tracks,taskId,p){
+  box.innerHTML=tracks.filter(t=>t.audioUrl||t.streamAudioUrl).map((t,i)=>{
+    const url=t.audioUrl||t.streamAudioUrl;
+    return `<div class="track">
+      <img src="${esc(t.imageUrl||'')}" alt="" onerror="this.style.visibility='hidden'">
+      <div><h4>${esc(t.title||'Tanpa judul')}</h4>
+        <div class="meta">${esc(t.tags||'')}${t.duration?' · '+Math.round(t.duration)+' dtk':''}<br>Audio ID: <code>${esc(t.id)}</code></div>
+        <audio controls preload="none" src="${esc(url)}"></audio>
+        <div class="acts">
+          <a class="btn sec sm" href="${esc(url)}" target="_blank" rel="noopener" download>Unduh</a>
+          <button class="btn sec sm" data-a="wav" data-i="${i}">WAV</button>
+          <button class="btn sec sm" data-a="lyr" data-i="${i}">Lirik</button>
+          <button class="btn sec sm" data-a="vid" data-i="${i}">Video</button>
+          <button class="btn sec sm" data-a="cp" data-i="${i}">Salin ID</button>
+        </div></div></div>`}).join('');
+  const list=tracks.filter(t=>t.audioUrl||t.streamAudioUrl);
+  box.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
+    const t=list[+b.dataset.i];provider=p;buildSeg();
+    const fill=(pre)=>{$('#'+pre+'-task').value=taskId;$('#'+pre+'-audio').value=t.id};
+    if(b.dataset.a==='wav'){fill('w');go('wav')}
+    if(b.dataset.a==='lyr'){fill('l');go('lyrics')}
+    if(b.dataset.a==='vid'){fill('vd');go('video')}
+    if(b.dataset.a==='cp'){navigator.clipboard?.writeText(taskId+' / '+t.id);toast('Task ID dan Audio ID disalin.')}
+  });
+}
+function saveHistory(tracks,taskId,p){
+  tracks.forEach(t=>{ if(!(t.audioUrl||t.streamAudioUrl))return;
+    if(history_.some(h=>h.id===t.id))return;
+    history_.unshift({id:t.id,taskId,provider:p,title:t.title,tags:t.tags,audioUrl:t.audioUrl||t.streamAudioUrl,imageUrl:t.imageUrl,duration:t.duration,ts:Date.now()});});
+  history_=history_.slice(0,200);store.set('ms_history',history_);
+}
+function renderHistory(){
+  const box=$('#h-list');
+  if(!history_.length){box.innerHTML='<div class="hint">Belum ada riwayat. Track yang kamu generate akan muncul di sini.</div>';return}
+  box.innerHTML=history_.map(h=>`<div class="track"><img src="${esc(h.imageUrl||'')}" alt="" onerror="this.style.visibility='hidden'">
+    <div><h4>${esc(h.title||'Tanpa judul')}</h4><div class="meta">${PNAME[h.provider]} · ${new Date(h.ts).toLocaleString('id-ID')}<br>Task: <code>${esc(h.taskId)}</code> · Audio: <code>${esc(h.id)}</code></div>
+    <audio controls preload="none" src="${esc(h.audioUrl)}"></audio>
+    <div class="acts"><a class="btn sec sm" href="${esc(h.audioUrl)}" target="_blank" rel="noopener" download>Unduh</a>
+    <button class="btn danger sm" data-rm="${esc(h.id)}">Hapus</button></div></div></div>`).join('');
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{history_=history_.filter(h=>h.id!==b.dataset.rm);store.set('ms_history',history_);renderHistory()});
+}
+$('#h-refresh').onclick=renderHistory;
+$('#h-clear').onclick=()=>{if(confirm('Hapus semua riwayat?')){history_=[];store.set('ms_history',[]);renderHistory()}};
+
+/* ---------- Music task flow (generate & cover) ---------- */
+const FAIL=['CREATE_TASK_FAILED','GENERATE_AUDIO_FAILED','CALLBACK_EXCEPTION','SENSITIVE_WORD_ERROR'];
+async function runMusicTask(p,path,body,kind,ids){
+  const btn=$(ids.btn);btn.disabled=true;$(ids.tracks).innerHTML='';
+  try{
+    setStatus(ids.status,'Mengirim request…','wait');
+    const {data,key}=await api(p,'POST',path,body,kind);
+    const taskId=data.taskId;if(!taskId)throw new Error('Task ID tidak ditemukan di respons.');
+    addGenLog({provider:p,kind,key:key.label||maskKey(key.key),ok:true,code:200,taskId,msg:'Task dibuat'});
+    $('#k-task').value=taskId;
+    const r=await poll('m-'+ids.status,async n=>{
+      const {data:d}=await api(p,'GET','/api/v1/generate/record-info?taskId='+encodeURIComponent(taskId),null,'status');
+      const st=d.status;const tr=(d.response&&d.response.sunoData)||[];
+      setStatus(ids.status,'Task ID: '+taskId+'\nStatus: '+st+' — '+explain(st)+'\nCek ke-'+n,FAIL.includes(st)?'err':'wait');
+      if(tr.length&&(st==='FIRST_SUCCESS'||st==='SUCCESS'))renderTracks($(ids.tracks),tr,taskId,p);
+      if(st==='SUCCESS'){saveHistory(tr,taskId,p);return {ok:true,st}}
+      if(FAIL.includes(st)||d.errorMessage){return {ok:false,st,msg:d.errorMessage}}
+    });
+    if(r.ok){setStatus(ids.status,'Selesai. Task ID: '+taskId,'ok');updateGenLog(taskId,{msg:'Selesai'})}
+    else if(r.st){setStatus(ids.status,'Gagal: '+explain(r.st)+(r.msg?'\n'+r.msg:'')+'\nTask ID: '+taskId,'err');updateGenLog(taskId,{ok:false,code:r.st,msg:explain(r.st)})}
+    else setStatus(ids.status,'Polling berhenti ('+r+'). Lanjutkan di menu Cek status task dengan Task ID: '+taskId,'err');
+  }catch(e){setStatus(ids.status,e.message,'err');log(e.message,'err')}
+  finally{btn.disabled=false}
+}
+
+/* Generate */
+const gMode=()=>$('#g-mode').value==='1';
+$('#g-mode').onchange=()=>{const c=gMode();$('#g-custom').classList.toggle('hide',!c);
+  $('#g-plabel').innerHTML=c?'Lirik <small>(maks 5000 karakter)</small>':'Deskripsi lagu <small>(maks 500 karakter)</small>'};
+$('#g-go').onclick=()=>{
+  const c=gMode(),inst=$('#g-inst').checked,prompt=$('#g-prompt').value.trim(),style=$('#g-style').value.trim(),title=$('#g-title').value.trim();
+  if(!prompt&&!(c&&inst))return setStatus('#g-status','Isi deskripsi atau lirik dulu.','err');
+  if(c&&(!style||!title))return setStatus('#g-status','Mode custom wajib mengisi style dan judul.','err');
+  const body={customMode:c,instrumental:inst,model:$('#g-model').value,callBackUrl:CB};
+  if(prompt)body.prompt=prompt;
+  if(c){body.style=style;body.title=title}
+  if($('#g-neg').value.trim())body.negativeTags=$('#g-neg').value.trim();
+  if($('#g-vocal').value&&!inst)body.vocalGender=$('#g-vocal').value;
+  runMusicTask(provider,'/api/v1/generate',body,'generate',{btn:'#g-go',status:'#g-status',tracks:'#g-tracks'});
+};
+
+/* Cover */
+$('#c-lmode').onchange=()=>{const m=$('#c-lmode').value;$('#c-textwrap').classList.toggle('hide',m==='auto');
+  $('#c-tlabel').textContent=m==='custom'?'Lirik kamu':'Deskripsi cover (mood, tema, energi)'};
+$('#c-go').onclick=()=>{
+  const url=$('#c-url').value.trim(),m=$('#c-lmode').value,style=$('#c-style').value.trim(),title=$('#c-title').value.trim(),txt=$('#c-text').value.trim(),inst=$('#c-inst').checked;
+  if(!/^https?:\/\//.test(url))return setStatus('#c-status','Isi URL audio yang valid (diawali http:// atau https://).','err');
+  if(!style)return setStatus('#c-status','Style wajib diisi.','err');
+  if(m==='custom'&&!title)return setStatus('#c-status','Mode custom wajib mengisi judul.','err');
+  if(m!=='auto'&&!txt&&!inst)return setStatus('#c-status','Isi teks '+(m==='custom'?'lirik':'deskripsi')+' dulu.','err');
+  const body={uploadUrl:url,model:$('#c-model').value,instrumental:inst,callBackUrl:CB};
+  if(m==='custom'){body.customMode=true;body.prompt=txt;body.style=style;body.title=title}
+  else{body.customMode=false;body.prompt=((m==='describe'&&txt?txt+'. ':'')+'Cover dengan gaya '+style).slice(0,500)}
+  runMusicTask(provider,'/api/v1/generate/upload-cover',body,'cover',{btn:'#c-go',status:'#c-status',tracks:'#c-tracks'});
+};
+
+/* ---------- Generic result finder (video / wav) ---------- */
+function findUrl(o,keys){
+  if(!o||typeof o!=='object')return null;
+  for(const k of keys){if(typeof o[k]==='string'&&o[k])return o[k]}
+  for(const v of Object.values(o)){const r=findUrl(v,keys);if(r)return r}
+  return null;
+}
+function flag(d){return String(d.successFlag||d.status||'').toUpperCase()}
+const BAD=['FAILED','ERROR','CREATE_TASK_FAILED','GENERATE_AUDIO_FAILED','GENERATE_MP4_FAILED','GENERATE_WAV_FAILED','CALLBACK_EXCEPTION'];
+
+async function runSimpleTask(p,createPath,body,statusPath,urlKeys,ids,label,pollId){
+  $(ids.btn).disabled=true;$(ids.out).innerHTML='';
+  try{
+    setStatus(ids.status,'Mengirim request…','wait');
+    const {data,key}=await api(p,'POST',createPath,body,label);
+    const taskId=data.taskId;if(!taskId)throw new Error('Task ID tidak ditemukan di respons.');
+    addGenLog({provider:p,kind:label,key:key.label||maskKey(key.key),ok:true,code:200,taskId,msg:'Task dibuat'});
+    const r=await poll(pollId,async n=>{
+      const {data:d}=await api(p,'GET',statusPath+'?taskId='+encodeURIComponent(taskId),null,'status');
+      const f=flag(d),u=findUrl(d,urlKeys);
+      setStatus(ids.status,label+' — Task ID: '+taskId+'\nStatus: '+(f||'MEMPROSES')+'\nCek ke-'+n,'wait');
+      if(u&&(f==='SUCCESS'||!f))return {ok:true,u};
+      if(u&&f!=='PENDING'&&f!=='GENERATING')return {ok:true,u};
+      if(BAD.some(x=>f.includes(x))||d.errorMessage)return {ok:false,msg:d.errorMessage||explain(f)};
+    },6000,100);
+    if(r.ok){setStatus(ids.status,'Selesai. Task ID: '+taskId,'ok');updateGenLog(taskId,{msg:'Selesai'});ids.done(r.u)}
+    else if(r.msg){setStatus(ids.status,'Gagal: '+r.msg,'err');updateGenLog(taskId,{ok:false,msg:r.msg})}
+    else setStatus(ids.status,'Polling berhenti ('+r+'). Cek lagi di menu Cek status task dengan Task ID: '+taskId,'err');
+  }catch(e){setStatus(ids.status,e.message,'err');log(e.message,'err')}
+  finally{$(ids.btn).disabled=false}
+}
+
+/* Video */
+$('#vd-go').onclick=()=>{
+  const t=$('#vd-task').value.trim(),a=$('#vd-audio').value.trim();
+  if(!t||!a)return setStatus('#vd-status','Isi Task ID dan Audio ID.','err');
+  const body={taskId:t,audioId:a,callBackUrl:CB};
+  if($('#vd-author').value.trim())body.author=$('#vd-author').value.trim();
+  if($('#vd-domain').value.trim())body.domainName=$('#vd-domain').value.trim();
+  runSimpleTask(provider,'/api/v1/mp4/generate',body,'/api/v1/mp4/record-info',['videoUrl','video_url'],
+    {btn:'#vd-go',status:'#vd-status',out:'#vd-out',done:u=>{$('#vd-out').innerHTML=`<video controls src="${esc(u)}" style="width:100%;margin-top:14px;border-radius:10px"></video><div class="bar"><a class="btn sec sm" href="${esc(u)}" target="_blank" rel="noopener" download>Unduh MP4</a></div>`}},'video','vd');
+};
+
+/* WAV */
+$('#w-go').onclick=()=>{
+  const t=$('#w-task').value.trim(),a=$('#w-audio').value.trim();
+  if(!t||!a)return setStatus('#w-status','Isi Task ID dan Audio ID.','err');
+  runSimpleTask(provider,'/api/v1/wav/generate',{taskId:t,audioId:a,callBackUrl:CB},'/api/v1/wav/record-info',['audioWavUrl','wavUrl','audio_wav_url'],
+    {btn:'#w-go',status:'#w-status',out:'#w-out',done:u=>{$('#w-out').innerHTML=`<audio controls src="${esc(u)}" style="width:100%;margin-top:14px"></audio><div class="bar"><a class="btn sec sm" href="${esc(u)}" target="_blank" rel="noopener" download>Unduh WAV</a></div><div class="hint">File WAV disimpan provider selama 14 hari.</div>`}},'wav','w');
+};
+$('#w-stop').onclick=()=>{stopPoll('w');setStatus('#w-status','Polling dihentikan.','')};
+
+/* Lyrics */
+let lastLyrics='';
+$('#l-go').onclick=async()=>{
+  const t=$('#l-task').value.trim(),a=$('#l-audio').value.trim();
+  if(!t||!a)return setStatus('#l-status','Isi Task ID dan Audio ID.','err');
+  $('#l-go').disabled=true;
+  try{
+    setStatus('#l-status','Mengambil lirik…','wait');
+    const {data}=await api(provider,'POST','/api/v1/generate/get-timestamped-lyrics',{taskId:t,audioId:a},'lyrics');
+    const words=data.alignedWords||[];
+    if(!words.length)throw new Error('Lirik tidak ditemukan untuk track ini.');
+    const fmt=s=>{s=Math.max(0,s);const m=Math.floor(s/60);return String(m).padStart(2,'0')+':'+(s%60).toFixed(1).padStart(4,'0')};
+    let line='',start=0,out=[];
+    words.forEach(w=>{const txt=w.word||'';if(!line)start=w.startS;line+=txt;
+      if(txt.includes('\n')){out.push('['+fmt(start)+'] '+line.trim());line=''}});
+    if(line.trim())out.push('['+fmt(start)+'] '+line.trim());
+    lastLyrics=out.join('\n');
+    const el=$('#l-out');el.textContent=lastLyrics;el.classList.remove('hide');
+    setStatus('#l-status','Lirik berhasil diambil.','ok');
+  }catch(e){setStatus('#l-status',e.message,'err')}
+  finally{$('#l-go').disabled=false}
+};
+$('#l-copy').onclick=()=>{if(!lastLyrics)return toast('Belum ada lirik.');navigator.clipboard?.writeText(lastLyrics);toast('Lirik disalin.')};
+
+/* Check */
+async function checkOnce(){
+  const t=$('#k-task').value.trim(),type=$('#k-type').value;
+  if(!t){setStatus('#k-status','Isi Task ID dulu.','err');return true}
+  const path={music:'/api/v1/generate/record-info',video:'/api/v1/mp4/record-info',wav:'/api/v1/wav/record-info'}[type];
+  try{
+    const {data:d}=await api(provider,'GET',path+'?taskId='+encodeURIComponent(t),null,'status');
+    const f=flag(d);let msg='Task ID: '+t+'\nStatus: '+(f||'tidak diketahui')+' — '+explain(f);
+    if(d.errorMessage)msg+='\nPesan: '+d.errorMessage;
+    const u=type==='music'?null:findUrl(d,['videoUrl','audioWavUrl','wavUrl']);
+    if(u)msg+='\nFile: '+u;
+    const ok=f==='SUCCESS',bad=BAD.some(x=>f.includes(x))||FAIL.includes(f);
+    setStatus('#k-status',msg,ok?'ok':bad?'err':'wait');
+    if(type==='music'){const tr=(d.response&&d.response.sunoData)||[];if(tr.length)renderTracks($('#k-tracks'),tr,t,provider)}
+    return ok||bad;
+  }catch(e){setStatus('#k-status',e.message,'err');return true}
+}
+$('#k-once').onclick=checkOnce;
+$('#k-auto').onclick=()=>poll('k',async()=>await checkOnce(),10000,60);
+$('#k-stop').onclick=()=>{stopPoll('k');toast('Auto cek dihentikan.')};
+
+/* ---------- Init ---------- */
+buildSeg();renderKeys();
+log('Music Studio siap. Tambahkan API key di menu Multi API key untuk mulai.','ok');
+</script>
+</body>
+</html>

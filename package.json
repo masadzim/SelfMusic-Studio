@@ -1,0 +1,72 @@
+{
+  "name": "selfmusic-studio",
+  "version": "1.0.0",
+  "description": "SelfMusic Studio desktop app for SunoAPI.org and KIE.AI",
+  "author": "SelfMusic Studio",
+  "homepage": "https://github.com/masadzim/SelfMusic-Studio",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "electron/main.cjs",
+  "desktopName": "selfmusic-studio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masadzim/SelfMusic-Studio.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build:linux": "electron-builder --linux AppImage",
+    "build:windows": "electron-builder --win nsis",
+    "build": "npm run build:linux && npm run build:windows",
+    "release": "electron-builder --linux AppImage --win nsis --publish always",
+    "release:linux": "electron-builder --linux AppImage --publish always",
+    "release:windows": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.selfmusic.studio",
+    "productName": "SelfMusic Studio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "SelfMusic-Studio.html",
+      "Asset/**/*",
+      "electron/main.cjs",
+      "package.json"
+    ],
+    "asar": true,
+    "publish": {
+      "provider": "github",
+      "owner": "masadzim",
+      "repo": "SelfMusic-Studio",
+      "releaseType": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo",
+      "icon": "Asset/icon.png",
+      "syncDesktopName": true,
+      "maintainer": "SelfMusic Studio"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "Asset/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
