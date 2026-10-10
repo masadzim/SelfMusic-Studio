@@ -4,7 +4,7 @@
   "description": "SelfMusic Studio desktop app for SunoAPI.org and KIE.AI",
   "author": "SelfMusic Studio",
   "homepage": "https://github.com/masadzim/SelfMusic-Studio",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "main": "electron/main.cjs",
   "desktopName": "selfmusic-studio",
