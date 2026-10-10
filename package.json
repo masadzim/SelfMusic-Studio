@@ -38,6 +38,7 @@
       "SelfMusic-Studio.html",
       "Asset/**/*",
       "electron/main.cjs",
+      "electron/preload.cjs",
       "package.json"
     ],
     "asar": true,

@@ -22,7 +22,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 
 /* Sidebar */
-aside{width:250px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;overflow-y:auto;height:100vh;position:sticky;top:0}
+aside{width:250px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;overflow-y:auto;height:100vh;position:sticky;top:0;display:flex;flex-direction:column}
 .brand{padding:4px 10px 16px}
 .brand-logo{display:block;width:100%;height:auto;margin-bottom:10px;border-radius:8px;background:#fff}
 .brand h1{font:700 22px var(--head);margin:0;letter-spacing:-.3px}
@@ -74,11 +74,35 @@ textarea{min-height:110px;resize:vertical}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .tag{display:inline-block;border-radius:6px;padding:1px 7px;font-size:12px;background:var(--panel2)}
-.tag.ok{color:var(--ok)} .tag.err{color:var(--err)} .tag.off{color:var(--warn)}
+.tag.ok{color:var(--ok)} .tag.err{color:var(--err)} .tag.off{color:var(--warn)} .tag.wait{color:var(--warn)}
+.badge{margin-left:6px;background:var(--accent2);color:#07302b;border-radius:9px;padding:1px 7px;font-size:12px;font-weight:700}
+.prog{height:8px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:3px}
+.prog i{display:block;height:100%;background:var(--accent2);width:0%;transition:width .2s}
 .scroll{overflow-x:auto}
 #log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:420px;overflow:auto;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}
 .lyr{white-space:pre-wrap;line-height:1.8;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px;max-height:380px;overflow:auto}
 .hide{display:none!important}
+
+/* Donate — tombol kuning di dasar sidebar */
+.donate{display:flex;align-items:center;justify-content:center;gap:10px;margin:auto 2px 6px;
+  padding:13px 16px;border-radius:12px;text-decoration:none;cursor:pointer;
+  background:linear-gradient(180deg,#ffd966,#f5b81b 60%,#e6a80d);color:#3a2b00;
+  font:700 16px var(--head);letter-spacing:.3px;
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 12px 26px -10px rgba(245,184,27,.65),inset 0 1px 0 rgba(255,255,255,.55);
+  transition:transform .15s,box-shadow .15s,filter .15s}
+.donate:hover{transform:translateY(-2px);filter:brightness(1.05);
+  box-shadow:0 18px 34px -10px rgba(245,184,27,.85)}
+.donate:active{transform:translateY(0)}
+.donate svg{width:18px;height:18px;color:#3a2b00;flex:none}
+.donate:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+
+/* Footer */
+.foot{max-width:860px;margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;
+  color:var(--muted);font:12px/1.7 ui-monospace,Menlo,Consolas,monospace}
+.foot-links a{color:var(--accent2);text-decoration:none;font-weight:700}
+.foot-links a:hover{text-decoration:underline}
 #toast{position:fixed;right:18px;bottom:18px;background:var(--panel2);border:1px solid var(--line);padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:9}
 #toast.on{opacity:1;transform:none}
 
@@ -110,9 +134,14 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <button class="nav" data-v="keys">Multi API key</button>
   <div class="grp">Library</div>
   <button class="nav" data-v="history">Riwayat</button>
+  <button class="nav" data-v="downloads">Unduhan <span class="badge hide" id="dlnav">0</span></button>
   <div class="grp">Debug</div>
   <button class="nav" data-v="genlog">Log generate</button>
   <button class="nav" data-v="activity">Log aktivitas</button>
+  <a class="donate" href="#" data-ext="https://adzim.my.id/support" title="Donasi untuk SelfMusic Studio">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20.4 4H3.6A1.6 1.6 0 0 0 2 5.6v9.6A1.6 1.6 0 0 0 3.6 16.7h5.4l2.5 2.7a.9.9 0 0 0 1.3 0l2.5-2.7h4.6a1.6 1.6 0 0 0 1.6-1.5V5.6A1.6 1.6 0 0 0 20.4 4Z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M9 9.5h6"/><path fill="currentColor" d="M12.5 6.5a1.7 1.7 0 1 0-3.4 0 1.7 1.7 0 1 0 3.4 0Zm0 5.9a1.7 1.7 0 1 0-3.4 0 1.7 1.7 0 1 0 3.4 0Z"/></svg>
+    Donate
+  </a>
 </aside>
 
 <main>
@@ -309,6 +338,17 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <div class="tracks" id="h-list"></div>
 </section>
 
+<!-- DOWNLOADS -->
+<section class="view" id="v-downloads">
+  <h2>Unduhan</h2>
+  <p class="sub">Unduhan melalui aplikasi dikelola di sini lewat dialog simpan (default: folder Downloads). Pause/resume berlaku jika didukung server.</p>
+  <div class="card">
+    <div class="bar" style="margin-top:0"><button class="btn sec sm" id="dl-rmdone">Bersihkan yang selesai</button></div>
+    <div class="hint" id="dl-empty">Belum ada unduhan. Pakai tombol “Unduh” di track atau hasil video/WAV untuk memulai.</div>
+    <div class="scroll hide" id="dl-wrap"><table><thead><tr><th>File</th><th>Ukuran</th><th>Status</th><th>Progres</th><th></th></tr></thead><tbody id="dl-body"></tbody></table></div>
+  </div>
+</section>
+
 <!-- GEN LOG -->
 <section class="view" id="v-genlog">
   <h2>Log generate</h2>
@@ -330,6 +370,14 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <div class="bar" style="margin:0 0 10px"><button class="btn danger sm" id="ac-clear">Bersihkan</button></div>
   <div id="log"></div>
 </section>
+<footer class="foot">
+  <span>© 2026 adzim.my.id · SelfMusic Studio</span>
+  <span class="foot-links">
+    <a href="#" data-ext="https://adzim.my.id/ai">adzim.my.id/ai</a> ·
+    <a href="#" data-ext="https://adzim.my.id/support">DONATE</a> ·
+    <a href="#" data-ext="https://adzim.my.id/privacy">PRIVASI</a>
+  </span>
+</footer>
 </main>
 <div id="toast" role="status"></div>
 
@@ -536,6 +584,71 @@ function renderHistory(){
 }
 $('#h-refresh').onclick=renderHistory;
 $('#h-clear').onclick=()=>{if(confirm('Hapus semua riwayat?')){history_=[];store.set('ms_history',[]);renderHistory()}};
+
+/* ---------- Downloads ---------- */
+const dls=[],DL_DONE=['completed','cancelled','interrupted'];
+const DL_LABEL={completed:'Selesai',progressing:'Mengunduh',paused:'Jeda',cancelled:'Dibatalkan',interrupted:'Gagal'};
+function fmtSize(b){
+  if(b===null||b===undefined)return '—';
+  if(b<1024)return b+' B';
+  if(b<1048576)return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824)return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(2)+' GB';
+}
+function renderDownloads(){
+  const tb=$('#dl-body'),wrap=$('#dl-wrap'),empty=$('#dl-empty');
+  const active=dls.filter(d=>!DL_DONE.includes(d.state)).length;
+  $('#dlnav').textContent=active;
+  $('#dlnav').classList.toggle('hide',!active);
+  wrap.classList.toggle('hide',!dls.length);
+  empty.classList.toggle('hide',!!dls.length);
+  tb.innerHTML=dls.map(d=>{
+    const done=DL_DONE.includes(d.state);
+    const running=d.state==='progressing';
+    const pct=d.totalBytes?Math.min(100,Math.round(d.receivedBytes/d.totalBytes*100)):0;
+    const tagCls=d.state==='completed'?'ok':(d.state==='cancelled'||d.state==='interrupted')?'err':(d.state==='paused'?'off':'wait');
+    const acts=[];
+    if(running||d.state==='paused')acts.push(`<button class="btn sec sm" data-act="${running?'pause':'resume'}" data-id="${d.id}">${running?'Jeda':'Lanjut'}</button>`);
+    if(!done)acts.push(`<button class="btn sec sm" data-act="cancel" data-id="${d.id}">Batal</button>`);
+    if(d.state==='completed'&&d.savePath)acts.push(`<button class="btn sec sm" data-act="reveal" data-id="${d.id}">Buka folder</button>`);
+    acts.push(`<button class="btn danger sm" data-act="rm" data-id="${d.id}">Hapus</button>`);
+    return `<tr>
+      <td>${esc(d.filename||'')}<br><small style="color:var(--muted);word-break:break-all">${esc(d.url||'')}</small></td>
+      <td style="white-space:nowrap">${fmtSize(d.receivedBytes)}${!done&&d.totalBytes?' / '+fmtSize(d.totalBytes):''}</td>
+      <td><span class="tag ${tagCls}">${DL_LABEL[d.state]||esc(d.state)}</span></td>
+      <td style="min-width:140px">${done?'<span style="color:var(--muted)">'+fmtSize(d.totalBytes)+'</span>':`<div class="prog"><i style="width:${pct}%"></i></div><small style="color:var(--muted)">${pct}%</small>`}</td>
+      <td style="white-space:nowrap">${acts.join(' ')}</td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
+    const d=dls.find(x=>x.id===b.dataset.id);if(!d)return;
+    const act=b.dataset.act;
+    if(act==='pause')window.desktop?.pause(d.id);
+    if(act==='resume')window.desktop?.resume(d.id);
+    if(act==='cancel')window.desktop?.cancel(d.id);
+    if(act==='reveal')window.desktop?.reveal(d.savePath);
+    if(act==='rm'){const i=dls.findIndex(x=>x.id===d.id);if(i>=0){dls.splice(i,1);renderDownloads()}}
+  });
+}
+if(window.desktop?.onUpdate){
+  window.desktop.onUpdate(d=>{
+    const i=dls.findIndex(x=>x.id===d.id);
+    if(i<0)dls.unshift(d);else dls[i]=d;
+    renderDownloads();
+  });
+}
+$('#dl-rmdone').onclick=()=>{for(let i=dls.length-1;i>=0;i--)if(DL_DONE.includes(dls[i].state))dls.splice(i,1);renderDownloads()};
+document.addEventListener('click',e=>{
+  const a=e.target.closest('a[download]');
+  if(!a)return;
+  e.preventDefault();
+  if(window.desktop?.download){toast('Pilih lokasi penyimpanan…');window.desktop.download(a.href)}
+  else{window.open(a.href,'_blank','noopener')}
+});
+/* Link eksternal (mis. Donate) — dibuka di browser */
+document.querySelectorAll('[data-ext]').forEach(a=>{
+  a.onclick=e=>{e.preventDefault();window.open(a.dataset.ext,'_blank','noopener')};
+});
 
 /* ---------- Music task flow (generate & cover) ---------- */
 const FAIL=['CREATE_TASK_FAILED','GENERATE_AUDIO_FAILED','CALLBACK_EXCEPTION','SENSITIVE_WORD_ERROR'];
