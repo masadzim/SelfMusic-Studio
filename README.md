@@ -14,6 +14,16 @@ menjadi aplikasi Windows dan Linux dengan auto-update.
 - Convert audio ke WAV
 - Ambil lirik
 - Cek status task
+- **Buat suara (TTS)** dengan banyak penyedia: ElevenLabs, OpenAI, Google Gemini,
+  Google Cloud, Microsoft Azure, MiniMax, Cartesia, Fish Audio, Qwen, Deepgram,
+  dan suara bawaan perangkat (gratis tanpa API key)
+- **Clone suara** dari unggahan file atau rekaman mikrofon, plus gaya bicara
+  (netral, semangat, bercerita, tenang, ramah)
+- **Pustaka suara** untuk menyimpan dan memakai ulang hasil clone
+- **Pengaturan sampel suara**: batas durasi min/maks, ukuran berkas, format,
+  auto-pilih suara baru, auto-putar pratinjau, dan pernyataan izin
+- **Tema aplikasi**: Gelap, Terang, Samudra, Senja
+- **Bahasa aplikasi**: Indonesia & English
 - Multi API key (beberapa key per provider, aktif/nonaktif, failover)
 - Riwayat, log generate, dan log aktivitas
 - Manajer unduhan native (pause, resume, cancel, buka folder)
@@ -77,6 +87,31 @@ electron/preload.cjs    # Bridge aman (contextBridge) ke renderer
 Asset/                  # Ikon dan logo
 BUILD.md                # Catatan build detail
 ```
+
+## Changelog
+
+### 1.1.0
+
+Fitur baru dari `voiceclone.html` serta penambahan pengaturan aplikasi:
+
+- **Modul suara (TTS)** dengan 10 penyedia API + suara perangkat, chunking
+  naskah otomatis, pemilih model, dan pemilih bahasa suara per penyedia.
+- **Clone suara** dari unggahan file atau rekaman mikrofon, dengan validasi
+  durasi/ukuran sampel, pratinjau audio, dan penyimpanan ke pustaka lokal.
+- **Pustaka suara** (`Pustaka suara`) untuk memakai ulang suara hasil clone.
+- **Pengaturan sampel suara** di menu `Preferensi`: durasi minimum/maksimum,
+  ukuran berkas maksimum, format yang diizinkan, auto-pilih suara baru,
+  auto-putar pratinjau, dan kewajiban pernyataan izin.
+- **Tema aplikasi**: Gelap, Terang, Samudra, dan Senja (tersimpan di browser).
+- **Bahasa aplikasi**: Indonesia dan English (i18n antarmuka).
+- Menu **Preferensi** baru; daftar provider API key dan alamat API diperluas
+  mencakup seluruh penyedia suara.
+- Versi aplikasi ditampilkan di menu Preferensi.
+
+### 1.0.0
+
+- Rilis awal: generate musik (SunoAPI.org & KIE.AI), cover, video MP4, WAV,
+  lirik, multi API key, riwayat, log, manajer unduhan native, dan auto-update.
 
 ## Lisensi
 

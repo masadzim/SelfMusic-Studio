@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SelfMusic Studio — Suno & KIE.AI</title>
+<title>SelfMusic Studio — Musik &amp; Suara AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -14,6 +14,24 @@
   --head:'Bricolage Grotesque','Trebuchet MS',sans-serif;
   --body:'DM Sans','Segoe UI',system-ui,sans-serif;
 }
+/* Tema aplikasi — diatur dari menu Preferensi */
+html[data-theme="terang"]{
+  --bg:#f2f0f7; --panel:#ffffff; --panel2:#ece9f4; --line:#d7d2e6;
+  --text:#221d2e; --muted:#6d6785; --accent:#d6336c; --accent2:#0f9b8e;
+  --ok:#1f9d63; --err:#d64545; --warn:#b8860b;
+}
+html[data-theme="samudra"]{
+  --bg:#0b1620; --panel:#122534; --panel2:#183243; --line:#26485e;
+  --text:#e6f2f8; --muted:#8fb0c2; --accent:#2fd6c3; --accent2:#54a0ff;
+  --ok:#3ddc97; --err:#ff7a7a; --warn:#f5c26b;
+}
+html[data-theme="senja"]{
+  --bg:#1d1410; --panel:#2a1d16; --panel2:#38271d; --line:#4d382a;
+  --text:#f7ece2; --muted:#c0a48f; --accent:#ff8f5e; --accent2:#ffd166;
+  --ok:#7ed6a5; --err:#ff7a7a; --warn:#f5c26b;
+}
+html[data-theme="terang"] .donate{color:#3a2b00}
+html[data-theme="terang"] .brand-logo{background:#efeaf7}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--text);font:15px/1.5 var(--body);display:flex}
@@ -82,6 +100,18 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 #log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:420px;overflow:auto;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}
 .lyr{white-space:pre-wrap;line-height:1.8;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px;max-height:380px;overflow:auto}
 .hide{display:none!important}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:5px 13px;cursor:pointer;color:var(--muted)}
+.chip.on{border-color:var(--accent2);color:var(--accent2);font-weight:600}
+.rec{color:var(--err)}
+.vrow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.vrow:last-child{border:0}.vrow>div{flex:1;min-width:0}
+.swatch{width:34px;height:34px;border-radius:9px;border:2px solid var(--line);cursor:pointer;padding:0}
+.swatch.on{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
+.themegrid{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.themecard{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--text)}
+.themecard.on{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
+.themecard .dot{width:16px;height:16px;border-radius:50%;flex:none}
 
 /* Donate — tombol kuning di dasar sidebar */
 .donate{display:flex;align-items:center;justify-content:center;gap:10px;margin:auto 2px 6px;
@@ -121,10 +151,13 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 <button class="burger" id="burger" aria-label="Buka menu">☰ Menu</button>
 
 <aside id="side">
-  <div class="brand"><img class="brand-logo" src="Asset/Logo.jpeg" alt="SelfMusic Studio"><small>SunoAPI.org &amp; KIE.AI</small></div>
+  <div class="brand"><img class="brand-logo" src="Asset/Logo.jpeg" alt="SelfMusic Studio"><small>Musik &amp; Suara AI</small></div>
   <div class="grp">Generate</div>
   <button class="nav on" data-v="gen">Generate musik</button>
   <button class="nav" data-v="cover">Upload &amp; cover</button>
+  <div class="grp">Suara</div>
+  <button class="nav" data-v="voice">Buat suara</button>
+  <button class="nav" data-v="vlib">Pustaka suara</button>
   <div class="grp">Alat</div>
   <button class="nav" data-v="video">Buat video MP4</button>
   <button class="nav" data-v="wav">Convert ke WAV</button>
@@ -132,6 +165,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <button class="nav" data-v="check">Cek status task</button>
   <div class="grp">Pengaturan</div>
   <button class="nav" data-v="keys">Multi API key</button>
+  <button class="nav" data-v="prefs">Preferensi</button>
   <div class="grp">Library</div>
   <button class="nav" data-v="history">Riwayat</button>
   <button class="nav" data-v="downloads">Unduhan <span class="badge hide" id="dlnav">0</span></button>
@@ -288,6 +322,69 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   </div>
 </section>
 
+<!-- VOICE -->
+<section class="view" id="v-voice">
+  <h2>Buat suara</h2>
+  <p class="sub">Ubah naskah jadi suara. Pilih penyedia yang API key-nya kamu punya.</p>
+  <div class="card">
+    <label style="margin-top:0">Penyedia suara</label>
+    <select id="vo-prov"></select>
+    <div class="hint" id="vo-note"></div>
+    <div id="vo-modelbox" class="hide"><label>Model <small>(boleh diubah jika penyedia merilis model baru)</small></label>
+      <input type="text" id="vo-model" list="vo-models" autocomplete="off"><datalist id="vo-models"></datalist></div>
+    <div id="vo-langbox" class="hide"><label>Bahasa suara</label>
+      <select id="vo-lang"><option value="id">Indonesia</option><option value="en">English</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="zh">中文</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="pt">Português</option><option value="hi">हिन्दी</option><option value="ar">العربية</option></select></div>
+    <div class="seg" id="vo-modes" style="margin-top:6px"></div>
+
+    <div id="vo-voicebox">
+      <label>Suara</label>
+      <div class="row" style="grid-template-columns:1fr auto;align-items:center">
+        <select id="vo-voice"></select>
+        <button class="btn sec sm" id="vo-load">Muat dari akun</button>
+      </div>
+    </div>
+
+    <div id="vo-clone" class="hide">
+      <label>Sampel suara <small id="vc-hint">(10–60 detik, bersih tanpa musik latar)</small></label>
+      <div class="bar" style="margin-top:0">
+        <input type="file" id="vc-file" accept="audio/*">
+        <button class="btn sec sm" id="vc-rec">Rekam dari mikrofon</button>
+        <button class="btn sec sm" id="vc-clear">Hapus sampel</button>
+      </div>
+      <audio id="vc-prev" controls class="hide" style="width:100%;margin-top:10px"></audio>
+      <div class="hint hide" id="vc-info"></div>
+      <label>Nama suara</label>
+      <input type="text" id="vc-name" placeholder="Narator utama" maxlength="40">
+      <label class="chk" id="vc-okwrap"><input type="checkbox" id="vc-ok"> Ini suaraku sendiri, atau pemiliknya sudah mengizinkan.</label>
+      <div class="bar"><button class="btn" id="vc-go">Buat clone suara</button></div>
+    </div>
+
+    <div id="vo-design" class="hide">
+      <label>Deskripsi suara dan gaya bicara</label>
+      <textarea id="vd2-desc" style="min-height:80px" placeholder="Wanita muda, ceria, tempo cepat, cocok untuk konten edukasi"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <label style="margin-top:0">Naskah</label>
+    <textarea id="vo-text" placeholder="Halo teman-teman, di video kali ini kita akan membahas..."></textarea>
+    <div style="text-align:right;color:var(--muted);font-size:13px"><span id="vo-count">0</span> karakter</div>
+    <label>Gaya bicara</label>
+    <div class="chips" id="vo-styles"></div>
+    <div class="bar"><button class="btn" id="vo-go">Generate suara</button><button class="btn sec" id="vo-stop">Berhenti</button></div>
+    <div class="prog hide" id="vo-prog"><i></i></div>
+    <div class="status hide" id="vo-status"></div>
+    <div id="vo-out"></div>
+  </div>
+</section>
+
+<!-- VOICE LIBRARY -->
+<section class="view" id="v-vlib">
+  <h2>Pustaka suara</h2>
+  <p class="sub">Suara hasil clone tersimpan di browser ini (hanya ID dan nama). Suara aslinya tetap ada di akun penyedia.</p>
+  <div class="card" id="vl-list"></div>
+</section>
+
 <!-- KEYS -->
 <section class="view" id="v-keys">
   <h2>Multi API key</h2>
@@ -322,11 +419,58 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   </div>
   <div class="card">
     <label style="margin-top:0">Alamat API <small>(ubah hanya jika memakai proxy sendiri)</small></label>
-    <div class="row">
-      <div><small>SunoAPI.org</small><input type="text" id="base-suno"></div>
-      <div><small>KIE.AI</small><input type="text" id="base-kie"></div>
-    </div>
+    <div class="row" id="base-grid"></div>
     <div class="bar"><button class="btn sec sm" id="base-save">Simpan alamat</button><button class="btn sec sm" id="base-reset">Kembalikan default</button></div>
+  </div>
+</section>
+
+<!-- PREFERENCES -->
+<section class="view" id="v-prefs">
+  <h2>Preferensi</h2>
+  <p class="sub">Atur tampilan aplikasi, bahasa, dan perilaku sampel suara. Semua tersimpan di browser ini.</p>
+
+  <div class="card">
+    <label style="margin-top:0">Tema aplikasi</label>
+    <div class="themegrid" id="pref-theme"></div>
+  </div>
+
+  <div class="card">
+    <label style="margin-top:0">Bahasa aplikasi</label>
+    <select id="pref-lang">
+      <option value="id">Indonesia</option>
+      <option value="en">English</option>
+    </select>
+    <div class="hint">Bahasa antarmuka aplikasi. Ini terpisah dari bahasa suara pada menu Buat suara.</div>
+  </div>
+
+  <div class="card">
+    <label style="margin-top:0">Pengaturan sampel suara</label>
+    <div class="hint">Berlaku untuk pembuatan clone suara (unggah file atau rekam dari mikrofon).</div>
+    <div class="row">
+      <div><label>Durasi minimum <small>(detik)</small></label><input type="number" id="pref-smp-min" min="1" max="120" value="10"></div>
+      <div><label>Durasi maksimum <small>(detik)</small></label><input type="number" id="pref-smp-max" min="5" max="600" value="60"></div>
+    </div>
+    <div class="row">
+      <div><label>Ukuran berkas maksimum <small>(MB)</small></label><input type="number" id="pref-smp-mb" min="1" max="100" value="15"></div>
+      <div><label>Format diizinkan</label>
+        <select id="pref-smp-fmt">
+          <option value="audio/*">Semua format audio</option>
+          <option value="audio/mpeg,audio/mp3,.mp3">MP3 saja</option>
+          <option value="audio/wav,audio/x-wav,.wav">WAV saja</option>
+          <option value="audio/webm,audio/ogg,.webm,.ogg">WebM / OGG</option>
+        </select></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="pref-smp-autoselect" checked> Pilih otomatis suara yang baru di-clone</label>
+    <label class="chk"><input type="checkbox" id="pref-smp-autoplay" checked> Putar pratinjau sampel otomatis setelah dipilih</label>
+    <label class="chk"><input type="checkbox" id="pref-smp-consent" checked> Wajib centang pernyataan izin sebelum clone</label>
+    <div class="bar"><button class="btn sec sm" id="pref-smp-reset">Kembalikan default sampel</button></div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-top:0">
+      <button class="btn danger sm" id="pref-reset">Reset semua preferensi</button>
+    </div>
+    <div class="hint">Versi aplikasi: <b id="pref-version">—</b></div>
   </div>
 </section>
 
@@ -371,7 +515,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <div id="log"></div>
 </section>
 <footer class="foot">
-  <span>© 2026 adzim.my.id · SelfMusic Studio</span>
+  <span>© 2026 adzim.my.id · SelfMusic Studio v1.1.0</span>
   <span class="foot-links">
     <a href="#" data-ext="https://adzim.my.id/ai">adzim.my.id/ai</a> ·
     <a href="#" data-ext="https://adzim.my.id/support">DONATE</a> ·
@@ -388,8 +532,10 @@ const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 };
-const DEFAULT_BASE={suno:'https://api.sunoapi.org',kie:'https://api.kie.ai'};
-const PNAME={suno:'SunoAPI.org',kie:'KIE.AI'};
+const DEFAULT_BASE={suno:'https://api.sunoapi.org',kie:'https://api.kie.ai',elevenlabs:'https://api.elevenlabs.io',openai:'https://api.openai.com',fish:'https://api.fish.audio',qwen:'https://dashscope-intl.aliyuncs.com',gemini:'https://generativelanguage.googleapis.com',google:'https://texttospeech.googleapis.com',azure:'https://southeastasia.tts.speech.microsoft.com',minimax:'https://api.minimax.io',cartesia:'https://api.cartesia.ai',deepgram:'https://api.deepgram.com'};
+const PNAME={suno:'SunoAPI.org',kie:'KIE.AI',elevenlabs:'ElevenLabs',openai:'OpenAI',fish:'Fish Audio',qwen:'Qwen / Alibaba',gemini:'Google Gemini TTS',google:'Google Cloud TTS',azure:'Microsoft Azure',minimax:'MiniMax',cartesia:'Cartesia',deepgram:'Deepgram'};
+const MPROV=['suno','kie'];
+const VPROVP=['elevenlabs','openai','gemini','google','azure','minimax','cartesia','fish','qwen','deepgram'];
 const CB='https://example.com/callback'; // wajib diisi oleh API, hasil diambil lewat polling
 
 let keys=store.get('ms_keys',[]), mode=store.get('ms_mode','rr'), manualId=store.get('ms_manual',null);
@@ -412,6 +558,10 @@ function go(v){
   $('#side').classList.remove('open');
   $('main').scrollTop=0;
   if(v==='history')renderHistory(); if(v==='genlog')renderGenLog(); if(v==='keys')renderKeys();
+  if(v==='vlib'&&typeof renderVLib==='function')renderVLib();
+  if(v==='voice'&&typeof refreshVoices==='function')refreshVoices();
+  if(v==='prefs'&&typeof renderPrefs==='function')renderPrefs();
+  if(typeof applyLang==='function')applyLang();
 }
 $$('.nav').forEach(b=>b.onclick=()=>go(b.dataset.v));
 $('#burger').onclick=()=>$('#side').classList.toggle('open');
@@ -419,7 +569,7 @@ $('#burger').onclick=()=>$('#side').classList.toggle('open');
 /* ---------- Provider switch ---------- */
 function buildSeg(){
   $$('[data-prov-seg]').forEach(seg=>{
-    seg.innerHTML=Object.keys(PNAME).map(p=>`<button data-p="${p}" class="${p===provider?'on':''}">${PNAME[p]}</button>`).join('');
+    seg.innerHTML=MPROV.map(p=>`<button data-p="${p}" class="${p===provider?'on':''}">${PNAME[p]}</button>`).join('');
     seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{provider=b.dataset.p;store.set('ms_prov',provider);buildSeg()});
   });
 }
@@ -431,11 +581,11 @@ function pickKey(p,tried){
   if(!pool.length)return null;
   if(mode==='man'){return pool.find(k=>k.id===manualId)||null}
   if(mode==='fo')return pool[0];
-  rr[p]=(rr[p]+1)%pool.length;return pool[rr[p]];
+  rr[p]=((rr[p]||0)+1)%pool.length;return pool[rr[p]];
 }
 function renderKeys(){
   $('#ky-mode').value=mode;
-  $('#base-suno').value=bases.suno;$('#base-kie').value=bases.kie;
+  renderBases();
   const tb=$('#ky-list');
   if(!keys.length){tb.innerHTML='<tr><td colspan="8" style="color:var(--muted)">Belum ada key. Tambahkan key di atas untuk mulai.</td></tr>';return}
   tb.innerHTML=keys.map(k=>`<tr>
@@ -463,7 +613,8 @@ $('#ky-import').onclick=()=>$('#ky-file').click();
 $('#ky-file').onchange=async e=>{try{const arr=JSON.parse(await e.target.files[0].text());
   arr.forEach(k=>{if(k.key&&k.provider&&!keys.some(x=>x.key===k.key))keys.push(Object.assign({id:crypto.randomUUID(),ok:0,fail:0,disabled:false},k))});
   saveKeys();renderKeys();toast('Impor selesai.')}catch{toast('File tidak valid.')}};
-$('#base-save').onclick=()=>{bases={suno:$('#base-suno').value.trim().replace(/\/$/,''),kie:$('#base-kie').value.trim().replace(/\/$/,'')};store.set('ms_bases',bases);toast('Alamat disimpan.')};
+function renderBases(){$('#base-grid').innerHTML=Object.keys(PNAME).map(p=>`<div><small>${PNAME[p]}</small><input type="text" data-base="${p}" value="${esc(bases[p])}"></div>`).join('')}
+$('#base-save').onclick=()=>{$$('[data-base]').forEach(i=>{bases[i.dataset.base]=i.value.trim().replace(/\/$/,'')||DEFAULT_BASE[i.dataset.base]});store.set('ms_bases',bases);toast('Alamat disimpan.')};
 $('#base-reset').onclick=()=>{bases={...DEFAULT_BASE};store.set('ms_bases',{});renderKeys()};
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
 
@@ -803,9 +954,497 @@ $('#k-once').onclick=checkOnce;
 $('#k-auto').onclick=()=>poll('k',async()=>await checkOnce(),10000,60);
 $('#k-stop').onclick=()=>{stopPoll('k');toast('Auto cek dihentikan.')};
 
+/* =====================================================================
+   MODUL SUARA — adaptor per penyedia (dari voiceclone.html)
+   Tiap adaptor: name, note, modes, max (karakter per request), auth(key),
+   presets, list(), clone(file,name), tts({text,voice,style,instr})
+   ===================================================================== */
+const STYLES={
+  netral:{label:'Netral',instr:'Speak in a clear, neutral, natural tone.',stab:.5,say:'',rate:1},
+  semangat:{label:'Semangat',instr:'Speak with high energy, upbeat and enthusiastic.',stab:.25,say:'in an upbeat, energetic way',rate:1.12},
+  bercerita:{label:'Bercerita',instr:'Speak like a warm storyteller, expressive with natural pauses.',stab:.4,say:'like a warm storyteller',rate:.97},
+  tenang:{label:'Tenang',instr:'Speak slowly, calm and soothing.',stab:.8,say:'slowly, calm and soothing',rate:.88},
+  ramah:{label:'Ramah',instr:'Speak in a friendly, warm and welcoming tone.',stab:.45,say:'in a friendly, welcoming tone',rate:1}
+};
+const toDataURL=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(new Error('Gagal membaca file.'));r.readAsDataURL(f)});
+const b64Bytes=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+const escXml=t=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+
+const VOICE={
+  elevenlabs:{name:'ElevenLabs',modes:['use','clone'],max:4500,models:{def:'eleven_multilingual_v2',list:['eleven_multilingual_v2','eleven_flash_v2_5','eleven_turbo_v2_5','eleven_v3']},
+    note:'Mendukung clone suara dari sampel. Biasanya bisa dipanggil langsung dari browser.',
+    auth:k=>({'xi-api-key':k}),presets:[],
+    list:async()=>{const {res}=await vfetch('elevenlabs','/v1/voices',{method:'GET'},'list');const j=await res.json();return (j.voices||[]).map(v=>({id:v.voice_id,name:v.name+(v.category?' ('+v.category+')':'')}))},
+    clone:async(file,name)=>{const fd=new FormData();fd.append('name',name);fd.append('files',file);
+      const {res}=await vfetch('elevenlabs','/v1/voices/add',{method:'POST',body:fd},'clone');const j=await res.json();if(!j.voice_id)throw new Error('voice_id tidak ditemukan di respons.');return {id:j.voice_id}},
+    tts:async({text,voice,style,model})=>{const {res}=await vfetch('elevenlabs','/v1/text-to-speech/'+encodeURIComponent(voice.id)+'?output_format=mp3_44100_128',
+      {method:'POST',headers:{'Content-Type':'application/json',Accept:'audio/mpeg'},body:JSON.stringify({text,model_id:model||'eleven_multilingual_v2',voice_settings:{stability:STYLES[style].stab,similarity_boost:.8}})},'tts');
+      return {blob:await res.blob()}}},
+  openai:{name:'OpenAI',modes:['use','design'],max:3800,models:{def:'gpt-4o-mini-tts',list:['gpt-4o-mini-tts','tts-1-hd','tts-1']},
+    note:'Suara bawaan dengan arahan gaya lewat teks, jadi “desain suara” dilakukan dengan deskripsi. Tidak ada clone.',
+    auth:k=>({Authorization:'Bearer '+k}),
+    presets:['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse'].map(v=>({id:v,name:v})),
+    tts:async({text,voice,instr,model})=>{const m=model||'gpt-4o-mini-tts';const body={model:m,voice:voice.id,input:text,response_format:'mp3'};if(m.startsWith('gpt-'))body.instructions=instr;
+      const {res}=await vfetch('openai','/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},'tts');return {blob:await res.blob()}}},
+  fish:{name:'Fish Audio',modes:['use','clone'],max:3000,
+    note:'Clone suara dari sampel pendek. Belum diuji dengan akun nyata; jika browser memblokir (CORS), pakai proxy.',
+    auth:k=>({Authorization:'Bearer '+k}),presets:[],
+    list:async()=>{const {res}=await vfetch('fish','/model?self=true&page_size=50',{method:'GET'},'list');const j=await res.json();return (j.items||[]).map(v=>({id:v._id,name:v.title}))},
+    clone:async(file,name)=>{const fd=new FormData();fd.append('type','tts');fd.append('title',name);fd.append('train_mode','fast');fd.append('visibility','private');fd.append('voices',file);
+      const {res}=await vfetch('fish','/model',{method:'POST',body:fd},'clone');const j=await res.json();const id=j._id||j.id;if(!id)throw new Error('ID model tidak ditemukan di respons.');return {id}},
+    tts:async({text,voice})=>{const {res}=await vfetch('fish','/v1/tts',{method:'POST',headers:{'Content-Type':'application/json',model:'s1'},
+      body:JSON.stringify({text,reference_id:voice.id||undefined,format:'mp3'})},'tts');return {blob:await res.blob()}}},
+  qwen:{name:'Qwen / Alibaba',modes:['use','clone'],max:500,
+    note:'Clone suara dengan Qwen3-TTS-VC. Biasanya butuh proxy karena CORS; isi alamat proxy di menu Multi API key. Key berbeda untuk region Singapura dan Beijing.',
+    auth:k=>({Authorization:'Bearer '+k}),
+    presets:['Cherry','Serena','Ethan','Chelsie'].map(v=>({id:v,name:v,model:'qwen3-tts-flash'})),
+    clone:async(file,name)=>{const target='qwen3-tts-vc-2026-01-22';const data=await toDataURL(file);
+      const pn=(name.replace(/[^A-Za-z0-9_]/g,'_').slice(0,16)||'voice');
+      const {res}=await vfetch('qwen','/api/v1/services/audio/tts/customization',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'qwen-voice-enrollment',input:{action:'create',target_model:target,preferred_name:pn,audio:{data}}})},'clone');
+      const j=await res.json();const v=j.output&&j.output.voice;if(!v)throw new Error('Nama suara tidak ditemukan di respons.');return {id:v,model:target}},
+    tts:async({text,voice})=>{const {res}=await vfetch('qwen','/api/v1/services/aigc/multimodal-generation/generation',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:voice.model||'qwen3-tts-flash',input:{text,voice:voice.id,language_type:'Auto'}})},'tts');
+      const j=await res.json();const u=j.output&&j.output.audio&&j.output.audio.url;if(!u)throw new Error('URL audio tidak ditemukan di respons.');
+      try{const r=await fetch(u);if(r.ok)return {blob:await r.blob(),url:u}}catch{}
+      return {url:u}}},
+  gemini:{name:'Google Gemini TTS',modes:['use'],max:3000,qkey:'key',
+    models:{def:'gemini-3.1-flash-tts-preview',list:['gemini-3.1-flash-tts-preview','gemini-2.5-flash-preview-tts','gemini-2.5-pro-preview-tts']},
+    note:'Pakai API key dari Google AI Studio (ada kuota gratis). Mendukung bahasa Indonesia. Gaya bicara lewat arahan di naskah. Nama model sering berubah, ubah kolom Model jika perlu.',
+    auth:()=>({}),
+    presets:['Kore','Puck','Zephyr','Charon','Fenrir','Leda','Orus','Aoede','Callirrhoe','Autonoe','Enceladus','Umbriel','Algieba','Sulafat'].map(v=>({id:v,name:v})),
+    tts:async({text,voice,style,model})=>{const m=model||'gemini-3.1-flash-tts-preview';const say=STYLES[style].say;
+      const {res}=await vfetch('gemini','/v1beta/models/'+encodeURIComponent(m)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:say?('Say '+say+': '+text):text}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voice.id}}}}})},'tts');
+      const j=await res.json();const parts=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[];
+      const inl=parts.find(x=>x.inlineData);if(!inl)throw new Error('Audio tidak ada di respons. '+JSON.stringify(j).slice(0,200));
+      const rate=+((/rate=(\d+)/.exec(inl.inlineData.mimeType||'')||[])[1])||24000;
+      return {pcm:b64Bytes(inl.inlineData.data),rate}}},
+  google:{name:'Google Cloud TTS',modes:['use'],max:1500,qkey:'key',
+    note:'Pakai API key dari Google Cloud (aktifkan Cloud Text-to-Speech API). Suara bahasa Indonesia tersedia. Tidak ada clone.',
+    auth:()=>({}),
+    presets:['id-ID-Standard-A','id-ID-Standard-B','id-ID-Wavenet-A','id-ID-Wavenet-B','en-US-Neural2-F','en-US-Neural2-D'].map(v=>({id:v,name:v})),
+    list:async()=>{const {res}=await vfetch('google','/v1/voices',{method:'GET'},'list');const j=await res.json();
+      return (j.voices||[]).filter(v=>/^(id|en-US|en-GB)/.test(v.languageCodes[0])).map(v=>({id:v.name,name:v.name+' ('+v.ssmlGender+')'}))},
+    tts:async({text,voice,style})=>{const lc=voice.id.split('-').slice(0,2).join('-');
+      const {res}=await vfetch('google','/v1/text:synthesize',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({input:{text},voice:{languageCode:lc,name:voice.id},audioConfig:{audioEncoding:'MP3',speakingRate:STYLES[style].rate}})},'tts');
+      const j=await res.json();if(!j.audioContent)throw new Error('audioContent tidak ada di respons.');
+      return {blob:new Blob([b64Bytes(j.audioContent)],{type:'audio/mpeg'})}}},
+  azure:{name:'Microsoft Azure',modes:['use'],max:3000,
+    note:'Pakai key Azure Speech. Alamat API default memakai region Southeast Asia; jika key-mu di region lain, ubah alamatnya di menu Multi API key. Tidak ada clone.',
+    auth:k=>({'Ocp-Apim-Subscription-Key':k}),
+    presets:['id-ID-ArdiNeural','id-ID-GadisNeural','en-US-JennyNeural','en-US-AriaNeural','en-US-GuyNeural'].map(v=>({id:v,name:v})),
+    list:async()=>{const {res}=await vfetch('azure','/cognitiveservices/voices/list',{method:'GET'},'list');const j=await res.json();
+      return j.map(v=>({id:v.ShortName,name:v.ShortName+' — '+v.Gender+' ('+v.Locale+')'})).sort((a,b)=>(/^id-/.test(b.id)-/^id-/.test(a.id))||a.id.localeCompare(b.id))},
+    tts:async({text,voice,style})=>{const lc=voice.id.split('-').slice(0,2).join('-');const r=Math.round((STYLES[style].rate-1)*100);
+      const ssml=`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${lc}"><voice name="${voice.id}"><prosody rate="${r>=0?'+':''}${r}%">${escXml(text)}</prosody></voice></speak>`;
+      const {res}=await vfetch('azure','/cognitiveservices/v1',{method:'POST',headers:{'Content-Type':'application/ssml+xml','X-Microsoft-OutputFormat':'audio-24khz-96kbitrate-mono-mp3'},body:ssml},'tts');
+      return {blob:await res.blob()}}},
+  minimax:{name:'MiniMax',modes:['use','clone'],max:3000,
+    models:{def:'speech-02-hd',list:['speech-02-hd','speech-02-turbo','speech-2.5-hd-preview']},
+    note:'Mendukung clone suara. Belum diuji dengan akun nyata. Suara hasil clone bersifat sementara sampai dipakai sintesis pertama kali.',
+    auth:k=>({Authorization:'Bearer '+k}),
+    presets:['male-qn-qingse','female-shaonv','presenter_male','presenter_female','audiobook_male_1','audiobook_female_1'].map(v=>({id:v,name:v})),
+    clone:async(file,name,)=>{const fd=new FormData();fd.append('purpose','voice_clone');fd.append('file',file);
+      const up=await vfetch('minimax','/v1/files/upload?purpose=voice_clone',{method:'POST',body:fd},'clone');const uj=await up.res.json();mmCheck(uj,up.key);
+      const fid=(uj.file&&uj.file.file_id)||uj.file_id;if(!fid)throw new Error('file_id tidak ditemukan di respons.');
+      const vid='v'+Math.random().toString(36).slice(2,12);
+      const cl=await vfetch('minimax','/v1/voice_clone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_id:fid,voice_id:vid})},'clone');
+      mmCheck(await cl.res.json(),cl.key);return {id:vid}},
+    tts:async({text,voice,style,model})=>{const {res,key}=await vfetch('minimax','/v1/t2a_v2',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:model||'speech-02-hd',text,stream:false,voice_setting:{voice_id:voice.id,speed:STYLES[style].rate,vol:1,pitch:0},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})},'tts');
+      const j=await res.json();mmCheck(j,key);const hex=j.data&&j.data.audio;if(!hex)throw new Error('Audio tidak ada di respons.');
+      const b=new Uint8Array(hex.length/2);for(let i=0;i<b.length;i++)b[i]=parseInt(hex.substr(i*2,2),16);
+      return {blob:new Blob([b],{type:'audio/mpeg'})}}},
+  cartesia:{name:'Cartesia',modes:['use','clone'],max:2500,lang:true,
+    models:{def:'sonic-2',list:['sonic-2','sonic-turbo','sonic-3']},
+    note:'Mendukung clone suara. Setelah membuat key, klik “Muat dari akun” untuk melihat daftar suara. Belum diuji dengan akun nyata.',
+    auth:k=>({'X-API-Key':k,'Cartesia-Version':'2025-04-16'}),presets:[],
+    list:async()=>{const {res}=await vfetch('cartesia','/voices?limit=100',{method:'GET'},'list');const j=await res.json();const arr=Array.isArray(j)?j:(j.data||[]);return arr.map(v=>({id:v.id,name:v.name+(v.language?' ('+v.language+')':'')}))},
+    clone:async(file,name)=>{const fd=new FormData();fd.append('clip',file);fd.append('name',name);fd.append('language',$('#vo-lang').value);fd.append('mode','similarity');
+      const {res}=await vfetch('cartesia','/voices/clone',{method:'POST',body:fd},'clone');const j=await res.json();if(!j.id)throw new Error('ID suara tidak ditemukan di respons.');return {id:j.id}},
+    tts:async({text,voice,model,lang})=>{const {res}=await vfetch('cartesia','/tts/bytes',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model_id:model||'sonic-2',transcript:text,voice:{mode:'id',id:voice.id},language:lang||'id',output_format:{container:'mp3',bit_rate:128000,sample_rate:44100}})},'tts');
+      return {blob:await res.blob()}}},
+  deepgram:{name:'Deepgram',modes:['use'],max:1900,
+    note:'Suara Aura berkualitas tinggi, terutama bahasa Inggris. Tidak ada clone.',
+    auth:k=>({Authorization:'Token '+k}),
+    presets:['aura-2-thalia-en','aura-2-andromeda-en','aura-2-apollo-en','aura-2-arcas-en','aura-2-luna-en','aura-2-orion-en'].map(v=>({id:v,name:v})),
+    tts:async({text,voice})=>{const {res}=await vfetch('deepgram','/v1/speak?encoding=mp3&model='+encodeURIComponent(voice.id),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})},'tts');
+      return {blob:await res.blob()}}},
+  device:{name:'Suara perangkat (gratis)',modes:['use'],max:100000,nokey:true,
+    note:'Tanpa API key, memakai suara bawaan browser. Hanya bisa diputar langsung, tidak bisa diunduh dan tidak ada clone.',
+    presets:[]}
+};
+const VORDER=['elevenlabs','openai','gemini','google','azure','minimax','cartesia','fish','qwen','deepgram','device'];
+
+let vprov=store.get('ms_vprov','elevenlabs'), vmode='use', vlib=store.get('ms_voices',[]), vremote={}, vcur=[], vstyle='netral';
+let sampleFile=null, vabort=false, vurl=null;
+
+function pcmToWav(chunks,rate){
+  const len=chunks.reduce((a,c)=>a+c.length,0),buf=new ArrayBuffer(44+len),v=new DataView(buf);
+  const w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');v.setUint32(4,36+len,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,len,true);
+  let o=44;chunks.forEach(c=>{new Uint8Array(buf,o,c.length).set(c);o+=c.length});
+  return new Blob([buf],{type:'audio/wav'});
+}
+function disableKey(p,k,code,msg,kind){
+  k.disabled=true;k.fail=(k.fail||0)+1;saveKeys();
+  addGenLog({provider:p,kind,key:k.label||maskKey(k.key),ok:false,code,msg});
+  log('Key '+(k.label||maskKey(k.key))+' dinonaktifkan ('+code+')','err');
+}
+function mmCheck(j,key){ // MiniMax selalu membalas HTTP 200, status asli ada di base_resp
+  const c=j&&j.base_resp&&j.base_resp.status_code;
+  if(c){ if(c===1004||c===1008||c===2049)disableKey('minimax',key,c,j.base_resp.status_msg,'tts');
+    throw new Error('MiniMax ['+c+'] '+(j.base_resp.status_msg||'Request gagal.'))}
+}
+async function vfetch(p,path,init,kind){
+  const ad=VOICE[p],tried=new Set();
+  for(;;){
+    const k=pickKey(p,tried);
+    if(!k)throw new Error('Tidak ada API key aktif untuk '+ad.name+'. Tambahkan atau aktifkan key di menu Multi API key.');
+    tried.add(k.id);
+    const label=k.label||maskKey(k.key);
+    let url=bases[p]+path;
+    if(ad.qkey)url+=(url.includes('?')?'&':'?')+ad.qkey+'='+encodeURIComponent(k.key);
+    log(init.method+' '+ad.name+path.split('?')[0]+' (key: '+label+')');
+    let res;
+    try{res=await fetch(url,Object.assign({},init,{headers:Object.assign({},ad.auth(k.key),init.headers||{})}))}
+    catch(e){log('Gagal terhubung: '+e.message,'err');
+      throw new Error('Tidak bisa terhubung ke '+ad.name+' ('+e.message+'). Kemungkinan diblokir CORS. Jalankan lewat proxy sendiri dan isi alamatnya di menu Multi API key.')}
+    if(res.ok){
+      k.ok=(k.ok||0)+1;saveKeys();
+      addGenLog({provider:p,kind,key:label,ok:true,code:res.status,msg:'OK'});
+      return {res,key:k};
+    }
+    const t=await res.text().catch(()=>'');
+    const more=keys.some(x=>x.provider===p&&!x.disabled&&!tried.has(x.id));
+    const dead=res.status===401||res.status===402||(ad.qkey&&/API key not valid|API_KEY_INVALID/i.test(t));
+    if(dead){disableKey(p,k,res.status,explain(res.status),kind);if(mode==='man')throw new Error(explain(res.status));continue}
+    if(res.status===429&&more&&mode!=='man'){log('Kuota key '+label+' penuh, pindah ke key lain.','err');continue}
+    k.fail=(k.fail||0)+1;saveKeys();
+    addGenLog({provider:p,kind,key:label,ok:false,code:res.status,msg:t.slice(0,200)});
+    throw new Error('['+res.status+'] '+(t.slice(0,300)||'Request gagal.'));
+  }
+}
+
+function chunkText(t,max){
+  const sents=t.replace(/\r/g,'').split(/(?<=[.!?。])\s+|\n+/).map(x=>x.trim()).filter(Boolean);
+  const out=[];let cur='';
+  for(let s of sents){
+    while(s.length>max){if(cur){out.push(cur);cur=''}out.push(s.slice(0,max));s=s.slice(max)}
+    if((cur+' '+s).trim().length>max){out.push(cur);cur=s}else cur=(cur+' '+s).trim();
+  }
+  if(cur)out.push(cur);return out;
+}
+
+/* ---------- Suara: inisialisasi & pemilih ---------- */
+function initVoice(){
+  $('#vo-prov').innerHTML=VORDER.map(p=>`<option value="${p}">${VOICE[p].name}</option>`).join('');
+  if(!VOICE[vprov])vprov='elevenlabs';
+  $('#vo-prov').value=vprov;
+  $('#vo-styles').innerHTML=Object.keys(STYLES).map(k=>`<button class="chip ${k===vstyle?'on':''}" data-s="${k}">${STYLES[k].label}</button>`).join('');
+  $$('#vo-styles .chip').forEach(c=>c.onclick=()=>{vstyle=c.dataset.s;$$('#vo-styles .chip').forEach(x=>x.classList.toggle('on',x===c))});
+  $('#vo-prov').onchange=()=>{vprov=$('#vo-prov').value;store.set('ms_vprov',vprov);vmode='use';applyProv()};
+  $('#vo-model').onchange=()=>{const m=store.get('ms_vmodels',{});m[vprov]=$('#vo-model').value.trim();store.set('ms_vmodels',m)};
+  $('#vo-text').oninput=()=>$('#vo-count').textContent=$('#vo-text').value.length;
+  applyProv();
+}
+function applyProv(){
+  const ad=VOICE[vprov];
+  $('#vo-note').textContent=ad.note+(ad.nokey?'':' Key diambil dari menu Multi API key.');
+  $('#vo-modelbox').classList.toggle('hide',!ad.models);
+  if(ad.models){$('#vo-models').innerHTML=ad.models.list.map(m=>`<option value="${m}">`).join('');$('#vo-model').value=store.get('ms_vmodels',{})[vprov]||ad.models.def}
+  $('#vo-langbox').classList.toggle('hide',!ad.lang);
+  if(!ad.modes.includes(vmode))vmode='use';
+  const L={use:'Pakai suara',clone:'Clone dari sampel',design:'Desain suara'};
+  $('#vo-modes').innerHTML=ad.modes.map(m=>`<button data-m="${m}" class="${m===vmode?'on':''}">${L[m]}</button>`).join('');
+  $$('#vo-modes button').forEach(b=>b.onclick=()=>{vmode=b.dataset.m;applyProv()});
+  $('#vo-modes').classList.toggle('hide',ad.modes.length<2);
+  $('#vo-clone').classList.toggle('hide',vmode!=='clone');
+  $('#vo-design').classList.toggle('hide',vmode!=='design');
+  $('#vo-voicebox').classList.toggle('hide',vmode==='clone');
+  $('#vo-load').classList.toggle('hide',!ad.list);
+  refreshVoices();
+}
+function refreshVoices(){
+  const p=vprov,ad=VOICE[p];
+  const sel=$('#vo-voice');if(!sel)return;
+  let groups=[];
+  if(p==='device'){
+    const dv=(window.speechSynthesis?speechSynthesis.getVoices():[]).map(v=>({id:v.name,name:v.name+' ('+v.lang+')'}));
+    groups.push(['Suara perangkat',dv]);
+    if(window.speechSynthesis&&speechSynthesis.onvoiceschanged===null)speechSynthesis.onvoiceschanged=refreshVoices;
+  }else{
+    if(ad.presets.length)groups.push(['Bawaan',ad.presets]);
+    const mine=vlib.filter(v=>v.provider===p).map(v=>({id:v.voiceId,name:v.name,model:v.model}));
+    if(mine.length)groups.push(['Clone saya',mine]);
+    if((vremote[p]||[]).length)groups.push(['Dari akun',vremote[p]]);
+  }
+  vcur=[];
+  sel.innerHTML=groups.map(([g,arr])=>`<optgroup label="${esc(g)}">`+arr.map(v=>{vcur.push(v);return `<option value="${vcur.length-1}">${esc(v.name)}</option>`}).join('')+'</optgroup>').join('')
+    ||'<option value="">Belum ada suara. Buat clone atau muat dari akun.</option>';
+}
+$('#vo-load').onclick=async()=>{
+  const p=vprov;$('#vo-load').disabled=true;
+  try{vremote[p]=await VOICE[p].list();refreshVoices();toast(vremote[p].length+' suara dimuat.')}
+  catch(e){setStatus('#vo-status',e.message,'err')}
+  finally{$('#vo-load').disabled=false}
+};
+
+/* ---------- Rekam & sampel suara ---------- */
+let rec=null,recParts=[];
+const SAMPLE_DEF={min:10,max:60,mb:15,fmt:'audio/*',autoselect:true,autoplay:true,consent:true};
+let samplePrefs=Object.assign({},SAMPLE_DEF,store.get('ms_sample',{}));
+function readDuration(file){return new Promise(res=>{try{const a=new Audio();a.preload='metadata';const u=URL.createObjectURL(file);
+  let done=false;const fin=d=>{if(done)return;done=true;try{URL.revokeObjectURL(u)}catch{}res(d)};
+  const to=setTimeout(()=>fin(0),4000);
+  a.onloadedmetadata=()=>{clearTimeout(to);const d=a.duration;fin(isFinite(d)?d:0)};
+  a.onerror=()=>{clearTimeout(to);fin(0)};a.src=u}catch{res(0)}})}
+function applySamplePrefs(){
+  const el=$('#vc-file');if(el)el.setAttribute('accept',samplePrefs.fmt);
+  const h=$('#vc-hint');if(h)h.textContent=`(${samplePrefs.min}–${samplePrefs.max} detik, maks ${samplePrefs.mb} MB, bersih tanpa musik latar)`;
+  const w=$('#vc-okwrap');if(w)w.classList.toggle('hide',!samplePrefs.consent);
+}
+async function validateSample(file){
+  const info=$('#vc-info');info.classList.remove('hide');info.classList.remove('status');
+  const mb=file.size/1048576;
+  const dur=await readDuration(file);
+  const msgs=[];
+  if(mb>samplePrefs.mb)msgs.push(`Berkas ${mb.toFixed(1)} MB melebihi batas ${samplePrefs.mb} MB.`);
+  if(dur&&dur<samplePrefs.min)msgs.push(`Durasi ${dur.toFixed(1)} dtk di bawah rekomendasi ${samplePrefs.min} dtk.`);
+  if(dur&&dur>samplePrefs.max)msgs.push(`Durasi ${dur.toFixed(1)} dtk di atas rekomendasi ${samplePrefs.max} dtk.`);
+  info.textContent=(dur?`Durasi ${dur.toFixed(1)} dtk · ${mb.toFixed(1)} MB. `:'')+(msgs.length?msgs.join(' '):'Sampel terlihat baik.');
+  info.style.borderLeftColor=msgs.length?'var(--warn)':'var(--accent2)';
+  return msgs;
+}
+$('#vc-file').onchange=async e=>{sampleFile=e.target.files[0]||null;if(sampleFile)await validateSample(sampleFile);prevSample()};
+$('#vc-clear').onclick=()=>{sampleFile=null;if(rec&&rec.state==='recording')rec.stop();
+  $('#vc-file').value='';$('#vc-prev').classList.add('hide');$('#vc-info').classList.add('hide');toast('Sampel dihapus.')};
+function prevSample(){const a=$('#vc-prev');if(!sampleFile){a.classList.add('hide');return}
+  a.src=URL.createObjectURL(sampleFile);a.classList.remove('hide');
+  if(samplePrefs.autoplay){try{const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{})}catch{}}}
+$('#vc-rec').onclick=async()=>{
+  if(rec&&rec.state==='recording'){rec.stop();return}
+  try{
+    const st=await navigator.mediaDevices.getUserMedia({audio:true});
+    rec=new MediaRecorder(st);recParts=[];
+    rec.ondataavailable=e=>recParts.push(e.data);
+    rec.onstop=()=>{st.getTracks().forEach(t=>t.stop());sampleFile=new File(recParts,'rekaman.webm',{type:rec.mimeType||'audio/webm'});
+      $('#vc-rec').textContent='Rekam dari mikrofon';$('#vc-rec').classList.remove('rec');validateSample(sampleFile);prevSample();
+      if(vprov==='qwen')toast('Qwen butuh WAV atau MP3. Untuk hasil terbaik, unggah file.')};
+    rec.start();$('#vc-rec').textContent='Berhenti merekam';$('#vc-rec').classList.add('rec');
+  }catch(e){toast('Mikrofon tidak bisa diakses: '+e.message)}
+};
+$('#vc-go').onclick=async()=>{
+  const p=vprov,name=$('#vc-name').value.trim();
+  if(!sampleFile)return setStatus('#vo-status','Pilih file sampel atau rekam suara dulu.','err');
+  if(!name)return setStatus('#vo-status','Isi nama suara.','err');
+  if(samplePrefs.consent&&!$('#vc-ok').checked)return setStatus('#vo-status','Centang pernyataan izin pemakaian suara dulu.','err');
+  const warns=await validateSample(sampleFile);
+  if(warns.some(m=>/melebihi batas/.test(m)))return setStatus('#vo-status',warns.join(' '),'err');
+  $('#vc-go').disabled=true;setStatus('#vo-status','Membuat clone suara…','wait');
+  try{
+    const r=await VOICE[p].clone(sampleFile,name);
+    vlib.unshift({id:String(Date.now()),provider:p,voiceId:r.id,model:r.model,name,ts:Date.now()});
+    store.set('ms_voices',vlib);
+    vmode='use';applyProv();
+    if(samplePrefs.autoselect){const idx=vcur.findIndex(v=>v.id===r.id);if(idx>=0)$('#vo-voice').value=idx}
+    setStatus('#vo-status','Clone “'+name+'” berhasil'+(samplePrefs.autoselect?' dan sudah dipilih':'')+'. Tulis naskah lalu generate.','ok');
+  }catch(e){setStatus('#vo-status',e.message,'err');log(e.message,'err')}
+  finally{$('#vc-go').disabled=false}
+};
+
+/* ---------- Generate suara ---------- */
+$('#vo-stop').onclick=()=>{vabort=true;if(window.speechSynthesis)speechSynthesis.cancel()};
+$('#vo-go').onclick=async()=>{
+  const p=vprov,ad=VOICE[p],text=$('#vo-text').value.trim();
+  if(!text)return setStatus('#vo-status','Tulis naskah dulu.','err');
+  const voice=vcur[+$('#vo-voice').value];
+  if(!voice&&vmode!=='clone')return setStatus('#vo-status','Pilih suara dulu.','err');
+  const desc=vmode==='design'?$('#vd2-desc').value.trim():'';
+  if(vmode==='design'&&!desc)return setStatus('#vo-status','Isi deskripsi suara dulu.','err');
+  const instr=(desc?desc+'. ':'')+STYLES[vstyle].instr;
+  vabort=false;
+  if(p==='device'){
+    if(!window.speechSynthesis)return setStatus('#vo-status','Browser ini tidak mendukung suara perangkat.','err');
+    speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
+    const dv=speechSynthesis.getVoices().find(v=>v.name===voice.id);if(dv)u.voice=dv;
+    u.rate=vstyle==='tenang'?.85:vstyle==='semangat'?1.15:1;
+    u.onend=()=>setStatus('#vo-status','Selesai diputar.','ok');
+    setStatus('#vo-status','Memutar langsung dari perangkat…','wait');speechSynthesis.speak(u);return;
+  }
+  const chunks=chunkText(text,ad.max),parts=[];
+  $('#vo-go').disabled=true;$('#vo-out').innerHTML='';
+  const pg=$('#vo-prog');pg.classList.remove('hide');
+  try{
+    for(let i=0;i<chunks.length;i++){
+      if(vabort)throw new Error('Dihentikan.');
+      setStatus('#vo-status','Menyintesis bagian '+(i+1)+' dari '+chunks.length+'…','wait');
+      pg.firstElementChild.style.width=(i/chunks.length*100)+'%';
+      parts.push(await ad.tts({text:chunks[i],voice,style:vstyle,instr,model:((store.get('ms_vmodels',{})[p]||'').trim()||(ad.models&&ad.models.def)||''),lang:$('#vo-lang').value}));
+    }
+    pg.firstElementChild.style.width='100%';
+    showVoice(parts);
+    setStatus('#vo-status','Selesai. '+chunks.length+' bagian disintesis.','ok');
+  }catch(e){setStatus('#vo-status',e.message,'err');log(e.message,'err')}
+  finally{$('#vo-go').disabled=false;setTimeout(()=>pg.classList.add('hide'),800)}
+};
+function showVoice(parts){
+  if(vurl){URL.revokeObjectURL(vurl);vurl=null}
+  const out=$('#vo-out');
+  if(parts.every(x=>x.pcm||x.blob)&&(parts.every(x=>x.pcm)||parts.every(x=>x.blob))){
+    const pcm=parts.every(x=>x.pcm);
+    const blob=pcm?pcmToWav(parts.map(x=>x.pcm),parts[0].rate):new Blob(parts.map(x=>x.blob),{type:parts[0].blob.type||'audio/mpeg'});
+    const ext=pcm||/wav/.test(blob.type)?'wav':'mp3';
+    vurl=URL.createObjectURL(blob);
+    out.innerHTML=`<audio controls src="${vurl}" style="width:100%;margin-top:14px"></audio><div class="bar"><a class="btn sec sm" href="${vurl}" download="suara-${Date.now()}.${ext}">Unduh ${ext.toUpperCase()}</a></div><div class="hint">Audio ini tidak disimpan otomatis. Unduh sebelum menutup halaman.</div>`;
+  }else{
+    out.innerHTML=parts.map((x,i)=>`<div style="margin-top:12px"><small>Bagian ${i+1}</small><audio controls src="${esc(x.url||URL.createObjectURL(x.blob))}" style="width:100%"></audio>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Buka / unduh</a>`:''}</div>`).join('')+'<div class="hint">Penyedia mengembalikan link sementara. Unduh segera karena bisa kedaluwarsa.</div>';
+  }
+}
+
+/* ---------- Pustaka suara ---------- */
+function renderVLib(){
+  const box=$('#vl-list');
+  if(!vlib.length){box.innerHTML='<div class="hint" style="margin:0">Belum ada suara clone. Buka menu Buat suara, pilih penyedia yang mendukung clone, lalu unggah sampel.</div>';return}
+  box.innerHTML=vlib.map(v=>`<div class="vrow"><div><b>${esc(v.name)}</b><br><small style="color:var(--muted)">${VOICE[v.provider]?VOICE[v.provider].name:v.provider} · ${new Date(v.ts).toLocaleDateString('id-ID')} · <code>${esc(v.voiceId)}</code></small></div>
+    <button class="btn sec sm" data-use="${v.id}">Pakai</button><button class="btn danger sm" data-del="${v.id}">Hapus</button></div>`).join('');
+  box.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{const v=vlib.find(x=>x.id===b.dataset.use);vprov=v.provider;vmode='use';$('#vo-prov').value=vprov;store.set('ms_vprov',vprov);applyProv();go('voice');
+    const i=vcur.findIndex(x=>x.id===v.voiceId);if(i>=0)$('#vo-voice').value=i});
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(confirm('Hapus dari pustaka lokal? Suara di akun penyedia tidak ikut terhapus.')){vlib=vlib.filter(x=>x.id!==b.dataset.del);store.set('ms_voices',vlib);renderVLib()}});
+}
+
+/* =====================================================================
+   PREFERENSI — tema, bahasa aplikasi, pengaturan sampel suara
+   ===================================================================== */
+const APP_VERSION='1.1.0';
+const THEMES=[
+  {id:'gelap',label:'Gelap',dot:'#ff6b8b'},
+  {id:'terang',label:'Terang',dot:'#d6336c'},
+  {id:'samudra',label:'Samudra',dot:'#2fd6c3'},
+  {id:'senja',label:'Senja',dot:'#ff8f5e'}
+];
+let theme=store.get('ms_theme','gelap');
+function applyTheme(){document.documentElement.dataset.theme=theme}
+function renderPrefs(){
+  $('#pref-theme').innerHTML=THEMES.map(x=>`<div class="themecard ${x.id===theme?'on':''}" data-theme="${x.id}"><span class="dot" style="background:${x.dot}"></span>${x.label}</div>`).join('');
+  $$('#pref-theme .themecard').forEach(c=>c.onclick=()=>{theme=c.dataset.theme;store.set('ms_theme',theme);applyTheme();renderPrefs()});
+  $('#pref-lang').value=lang;
+  $('#pref-smp-min').value=samplePrefs.min;
+  $('#pref-smp-max').value=samplePrefs.max;
+  $('#pref-smp-mb').value=samplePrefs.mb;
+  $('#pref-smp-fmt').value=samplePrefs.fmt;
+  $('#pref-smp-autoselect').checked=!!samplePrefs.autoselect;
+  $('#pref-smp-autoplay').checked=!!samplePrefs.autoplay;
+  $('#pref-smp-consent').checked=!!samplePrefs.consent;
+  $('#pref-smp-fmt').dataset.prev=samplePrefs.fmt;
+  $('#pref-version').textContent=APP_VERSION;
+}
+function saveSamplePrefs(){
+  const min=Math.max(1,+$('#pref-smp-min').value||SAMPLE_DEF.min);
+  let max=Math.max(5,+$('#pref-smp-max').value||SAMPLE_DEF.max);
+  if(max<min)max=min;
+  samplePrefs={min,max,mb:Math.max(1,+$('#pref-smp-mb').value||SAMPLE_DEF.mb),fmt:$('#pref-smp-fmt').value||SAMPLE_DEF.fmt,
+    autoselect:$('#pref-smp-autoselect').checked,autoplay:$('#pref-smp-autoplay').checked,consent:$('#pref-smp-consent').checked};
+  store.set('ms_sample',samplePrefs);applySamplePrefs();renderPrefs();toast('Pengaturan sampel disimpan.');
+}
+['#pref-smp-min','#pref-smp-max','#pref-smp-mb','#pref-smp-fmt','#pref-smp-autoselect','#pref-smp-autoplay','#pref-smp-consent']
+  .forEach(s=>{const el=$(s);if(el)el.onchange=saveSamplePrefs});
+$('#pref-smp-reset').onclick=()=>{samplePrefs={...SAMPLE_DEF};store.set('ms_sample',samplePrefs);applySamplePrefs();renderPrefs();toast('Pengaturan sampel dikembalikan ke default.')};
+$('#pref-lang').onchange=e=>{lang=e.target.value;store.set('ms_lang',lang);applyLang();renderPrefs();toast(lang==='en'?'Language changed.':'Bahasa diubah.')};
+$('#pref-reset').onclick=()=>{if(!confirm('Reset tema, bahasa, dan pengaturan sampel ke default?'))return;
+  theme='gelap';lang='id';samplePrefs={...SAMPLE_DEF};
+  store.set('ms_theme',theme);store.set('ms_lang',lang);store.set('ms_sample',samplePrefs);
+  applyTheme();applyLang();applySamplePrefs();renderPrefs();toast('Preferensi direset.')};
+
+/* =====================================================================
+   BAHASA APLIKASI (i18n) — menerjemahkan teks statis berdasarkan aslinya
+   ===================================================================== */
+let lang=store.get('ms_lang','id');
+const I18N={
+  id:{},
+  en:{
+    "Generate":"Generate","Suara":"Voice","Alat":"Tools","Pengaturan":"Settings","Library":"Library","Debug":"Debug",
+    "Generate musik":"Generate song","Upload & cover":"Upload & cover","Buat suara":"Create voice","Pustaka suara":"Voice library",
+    "Buat video MP4":"Create MP4 video","Convert ke WAV":"Convert to WAV","Ambil lirik":"Get lyrics","Cek status task":"Check task status",
+    "Multi API key":"Multi API key","Preferensi":"Preferences","Riwayat":"History","Unduhan":"Downloads",
+    "Log generate":"Generate log","Log aktivitas":"Activity log","Donate":"Donate",
+    "Buat lagu dari deskripsi atau lirik kamu sendiri.":"Create a song from your description or your own lyrics.",
+    "Ubah lagu yang sudah ada menjadi gaya baru. Audio sumber harus berupa URL publik.":"Turn an existing song into a new style. The source audio must be a public URL.",
+    "Ubah track hasil generate menjadi video dengan visualizer.":"Turn a generated track into a video with a visualizer.",
+    "Ubah track jadi WAV tanpa kompresi. Tombol “WAV” di hasil track mengisi form ini otomatis.":"Convert a track to uncompressed WAV. The “WAV” button on a track result fills this form automatically.",
+    "Ambil lirik dengan timestamp dari track yang sudah jadi.":"Get timestamped lyrics from a finished track.",
+    "Periksa progres musik, cover, atau video dengan Task ID.":"Check the progress of music, cover, or video by Task ID.",
+    "Ubah naskah jadi suara. Pilih penyedia yang API key-nya kamu punya.":"Turn a script into speech. Pick a provider whose API key you own.",
+    "Suara hasil clone tersimpan di browser ini (hanya ID dan nama). Suara aslinya tetap ada di akun penyedia.":"Cloned voices are stored in this browser (ID and name only). The actual voice stays in your provider account.",
+    "Simpan banyak key sekaligus. Semua key tersimpan hanya di browser kamu (localStorage).":"Store multiple keys at once. All keys are kept only in your browser (localStorage).",
+    "Atur tampilan aplikasi, bahasa, dan perilaku sampel suara. Semua tersimpan di browser ini.":"Adjust the app appearance, language, and voice sample behavior. All stored in this browser.",
+    "Track hasil generate dan cover tersimpan di browser ini. Link audio dari provider bisa kedaluwarsa, jadi unduh yang penting.":"Generated tracks and covers are stored in this browser. Provider audio links can expire, so download the important ones.",
+    "Unduhan melalui aplikasi dikelola di sini lewat dialog simpan (default: folder Downloads). Pause/resume berlaku jika didukung server.":"App downloads are managed here via the save dialog (default: Downloads folder). Pause/resume works if the server supports it.",
+    "Setiap request tercatat: berhasil atau gagal, key yang dipakai, kode error, dan Task ID.":"Every request is logged: success or failure, key used, error code, and Task ID.",
+    "Semua panggilan API dan perubahan status.":"All API calls and status changes.",
+    "Mode":"Mode","Model":"Model","Vokal":"Vocal","Negative tags":"Negative tags","Style / genre":"Style / genre","Judul track":"Track title",
+    "URL audio sumber":"Source audio URL","Mode lirik":"Lyrics mode","Deskripsi cover":"Cover description","Task ID":"Task ID","Audio ID":"Audio ID",
+    "Nama artis":"Artist name","Domain / watermark":"Domain / watermark","Jenis task":"Task type","Provider":"Provider","Label":"Label",
+    "API key":"API key","Cara memakai key":"How keys are used","Nama suara":"Voice name","Naskah":"Script","Gaya bicara":"Speaking style",
+    "Penyedia suara":"Voice provider","Suara":"Voice","Tema aplikasi":"App theme","Bahasa aplikasi":"App language",
+    "Pengaturan sampel suara":"Voice sample settings","Durasi minimum":"Minimum duration","Durasi maksimum":"Maximum duration",
+    "Ukuran berkas maksimum":"Maximum file size","Format diizinkan":"Allowed formats","Instrumental, tanpa vokal":"Instrumental, no vocals",
+    "Generate musik":"Generate music","Generate cover":"Generate cover","Buat video":"Create video","Convert ke WAV":"Convert to WAV",
+    "Stop":"Stop","Salin lirik":"Copy lyrics","Cek sekali":"Check once","Auto cek tiap 10 detik":"Auto-check every 10 seconds",
+    "Simpan key":"Save key","Reset statistik":"Reset statistics","Ekspor":"Export","Impor":"Import","Simpan alamat":"Save addresses",
+    "Kembalikan default":"Restore defaults","Muat ulang":"Reload","Hapus semua":"Delete all","Bersihkan":"Clear",
+    "Reset semua preferensi":"Reset all preferences","Kembalikan default sampel":"Restore sample defaults",
+    "Muat dari akun":"Load from account","Rekam dari mikrofon":"Record from microphone","Hapus sampel":"Remove sample",
+    "Buat clone suara":"Create voice clone","Generate suara":"Generate voice","Berhenti":"Stop","Pakai":"Use","Hapus":"Delete",
+    "Deskripsi suara dan gaya bicara":"Voice and speaking style description","Sampel suara":"Voice sample",
+    "Bahasa suara":"Voice language","Pilih otomatis suara yang baru di-clone":"Auto-select the newly cloned voice",
+    "Putar pratinjau sampel otomatis setelah dipilih":"Auto-play the sample preview once selected",
+    "Wajib centang pernyataan izin sebelum clone":"Require the consent statement before cloning",
+    "Ini suaraku sendiri, atau pemiliknya sudah mengizinkan.":"This is my own voice, or its owner has given permission.",
+    "Narator utama":"Main narrator","Bawaan":"Built-in","Clone saya":"My clones","Dari akun":"From account",
+    "Suara perangkat":"Device voices","Belum ada catatan.":"No records yet.",
+    "Pengaturan":"Settings","Alamat API":"API addresses","Semua format audio":"All audio formats","MP3 saja":"MP3 only",
+    "WAV saja":"WAV only","WebM / OGG":"WebM / OGG","Semua status":"All statuses","Hanya sukses":"Success only","Hanya gagal":"Failed only",
+    "Semua provider":"All providers","Bersihkan yang selesai":"Clear finished","Kembalikan default":"Restore defaults"
+  }
+};
+const origText=new WeakMap();
+function translateNode(n){
+  if(!origText.has(n))origText.set(n,n.nodeValue);
+  const o=origText.get(n);
+  const m=o.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  if(!m)return;
+  const d=I18N[lang];n.nodeValue=m[1]+((d&&d[m[2]])||m[2])+m[3];
+}
+const origAttr=new WeakMap();
+function translateAttr(el,name){
+  let map=origAttr.get(el);if(!map){map={};origAttr.set(el,map)}
+  if(!(name in map))map[name]=el.getAttribute(name)||'';
+  const o=map[name],d=I18N[lang];el.setAttribute(name,(d&&d[o])||o);
+}
+function applyLang(){
+  document.documentElement.lang=lang;
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
+  let n;while((n=w.nextNode())){if(n.parentElement&&n.parentElement.closest('script'))continue;translateNode(n)}
+  $$('[placeholder]').forEach(el=>translateAttr(el,'placeholder'));
+  $$('[title]').forEach(el=>translateAttr(el,'title'));
+  $$('[aria-label]').forEach(el=>translateAttr(el,'aria-label'));
+}
+
 /* ---------- Init ---------- */
 buildSeg();renderKeys();
-log('Music Studio siap. Tambahkan API key di menu Multi API key untuk mulai.','ok');
+$('#ky-prov').innerHTML=[...MPROV,...VPROVP].map(p=>`<option value="${p}">${PNAME[p]}</option>`).join('');
+$('#gl-prov').innerHTML='<option value="">Semua provider</option>'+Object.keys(PNAME).map(p=>`<option value="${p}">${PNAME[p]}</option>`).join('');
+applyTheme();
+initVoice();
+applySamplePrefs();
+renderPrefs();
+applyLang();
+log('SelfMusic Studio v'+APP_VERSION+' siap. Tambahkan API key di menu Multi API key untuk mulai.','ok');
 </script>
 </body>
 </html>
