@@ -372,6 +372,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
     <label>Gaya bicara</label>
     <div class="chips" id="vo-styles"></div>
     <div class="bar"><button class="btn" id="vo-go">Generate suara</button><button class="btn sec" id="vo-stop">Berhenti</button></div>
+    <label class="chk" style="margin:0"><input type="checkbox" id="vo-autosave"> Langsung simpan otomatis ke folder terakhir</label>
     <div class="prog hide" id="vo-prog"><i></i></div>
     <div class="status hide" id="vo-status"></div>
     <div id="vo-out"></div>
@@ -515,7 +516,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
   <div id="log"></div>
 </section>
 <footer class="foot">
-  <span>© 2026 adzim.my.id · SelfMusic Studio v1.1.0</span>
+  <span>© 2026 adzim.my.id · SelfMusic Studio v1.2.0</span>
   <span class="foot-links">
     <a href="#" data-ext="https://adzim.my.id/ai">adzim.my.id/ai</a> ·
     <a href="#" data-ext="https://adzim.my.id/support">DONATE</a> ·
@@ -589,11 +590,11 @@ function renderKeys(){
   const tb=$('#ky-list');
   if(!keys.length){tb.innerHTML='<tr><td colspan="8" style="color:var(--muted)">Belum ada key. Tambahkan key di atas untuk mulai.</td></tr>';return}
   tb.innerHTML=keys.map(k=>`<tr>
-    <td><input type="radio" name="manual" ${k.id===manualId?'checked':''} data-man="${k.id}" ${mode!=='man'?'disabled':''} aria-label="Pakai key ini"></td>
-    <td>${PNAME[k.provider]}</td><td>${esc(k.label||'-')}</td><td><code>${esc(maskKey(k.key))}</code></td>
+    <td><input type="radio" name="manual" ${k.id===manualId?'checked':''} data-man="${esc(k.id)}" ${mode!=='man'?'disabled':''} aria-label="Pakai key ini"></td>
+    <td>${esc(PNAME[k.provider]||k.provider||'-')}</td><td>${esc(k.label||'-')}</td><td><code>${esc(maskKey(k.key))}</code></td>
     <td>${k.disabled?'<span class="tag off">nonaktif</span>':'<span class="tag ok">aktif</span>'}</td>
-    <td>${k.ok||0}</td><td>${k.fail||0}</td>
-    <td style="white-space:nowrap"><button class="btn sec sm" data-tog="${k.id}">${k.disabled?'Aktifkan':'Matikan'}</button> <button class="btn danger sm" data-del="${k.id}">Hapus</button></td></tr>`).join('');
+    <td>${Number(k.ok)||0}</td><td>${Number(k.fail)||0}</td>
+    <td style="white-space:nowrap"><button class="btn sec sm" data-tog="${esc(k.id)}">${k.disabled?'Aktifkan':'Matikan'}</button> <button class="btn danger sm" data-del="${esc(k.id)}">Hapus</button></td></tr>`).join('');
   tb.querySelectorAll('[data-man]').forEach(r=>r.onchange=()=>{manualId=r.dataset.man;store.set('ms_manual',manualId)});
   tb.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{const k=keys.find(x=>x.id===b.dataset.tog);k.disabled=!k.disabled;saveKeys();renderKeys()});
   tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{keys=keys.filter(x=>x.id!==b.dataset.del);saveKeys();renderKeys()});
@@ -611,12 +612,17 @@ $('#ky-reset').onclick=()=>{keys.forEach(k=>{k.ok=0;k.fail=0;k.disabled=false});
 $('#ky-export').onclick=()=>download('music-studio-keys.json',JSON.stringify(keys,null,2),'application/json');
 $('#ky-import').onclick=()=>$('#ky-file').click();
 $('#ky-file').onchange=async e=>{try{const arr=JSON.parse(await e.target.files[0].text());
-  arr.forEach(k=>{if(k.key&&k.provider&&!keys.some(x=>x.key===k.key))keys.push(Object.assign({id:crypto.randomUUID(),ok:0,fail:0,disabled:false},k))});
+  if(!Array.isArray(arr))throw new Error('bukan daftar');
+  arr.filter(k=>k&&typeof k==='object').forEach(k=>{
+    const key=String(k.key||'').trim(),provider=String(k.provider||'').trim();
+    if(!key||!provider||keys.some(x=>x.key===key&&x.provider===provider))return;
+    keys.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),provider,
+      label:String(k.label||''),key,disabled:!!k.disabled,ok:0,fail:0})});
   saveKeys();renderKeys();toast('Impor selesai.')}catch{toast('File tidak valid.')}};
 function renderBases(){$('#base-grid').innerHTML=Object.keys(PNAME).map(p=>`<div><small>${PNAME[p]}</small><input type="text" data-base="${p}" value="${esc(bases[p])}"></div>`).join('')}
 $('#base-save').onclick=()=>{$$('[data-base]').forEach(i=>{bases[i.dataset.base]=i.value.trim().replace(/\/$/,'')||DEFAULT_BASE[i.dataset.base]});store.set('ms_bases',bases);toast('Alamat disimpan.')};
 $('#base-reset').onclick=()=>{bases={...DEFAULT_BASE};store.set('ms_bases',{});renderKeys()};
-function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+function download(name,text,type){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),8000)}
 
 /* ---------- API call ---------- */
 async function api(p,method,path,body,kind){
@@ -793,8 +799,15 @@ document.addEventListener('click',e=>{
   const a=e.target.closest('a[download]');
   if(!a)return;
   e.preventDefault();
-  if(window.desktop?.download){toast('Pilih lokasi penyimpanan…');window.desktop.download(a.href)}
-  else{window.open(a.href,'_blank','noopener')}
+  const href=a.href||'',name=a.getAttribute('download')||'';
+  if(/^(blob|data):/i.test(href)){ // audio hasil generate: tidak bisa diunduh lewat downloadURL
+    fetch(href).then(r=>r.blob()).then(b=>saveAudioFile(b,name||stampName('mp3')))
+      .then(r=>{if(r&&!r.canceled)toast('Tersimpan: '+((r.name)||name))})
+      .catch(err=>{toast(err.message);log(err.message,'err')});
+    return;
+  }
+  if(window.desktop?.download){toast('Pilih lokasi penyimpanan…');window.desktop.download(href)}
+  else{window.open(href,'_blank','noopener')}
 });
 /* Link eksternal (mis. Donate) — dibuka di browser */
 document.querySelectorAll('[data-ext]').forEach(a=>{
@@ -951,7 +964,7 @@ async function checkOnce(){
   }catch(e){setStatus('#k-status',e.message,'err');return true}
 }
 $('#k-once').onclick=checkOnce;
-$('#k-auto').onclick=()=>poll('k',async()=>await checkOnce(),10000,60);
+$('#k-auto').onclick=()=>{poll('k',async()=>await checkOnce(),10000,60).catch(e=>{log('Auto-cek gagal: '+e.message,'err')})};
 $('#k-stop').onclick=()=>{stopPoll('k');toast('Auto cek dihentikan.')};
 
 /* =====================================================================
@@ -1080,7 +1093,7 @@ const VOICE={
 const VORDER=['elevenlabs','openai','gemini','google','azure','minimax','cartesia','fish','qwen','deepgram','device'];
 
 let vprov=store.get('ms_vprov','elevenlabs'), vmode='use', vlib=store.get('ms_voices',[]), vremote={}, vcur=[], vstyle='netral';
-let sampleFile=null, vabort=false, vurl=null;
+let sampleFile=null, vabort=false, vurl=null, vblob=null, vfile=null, vpartURLs=[];
 
 function pcmToWav(chunks,rate){
   const len=chunks.reduce((a,c)=>a+c.length,0),buf=new ArrayBuffer(44+len),v=new DataView(buf);
@@ -1184,8 +1197,10 @@ function refreshVoices(){
     if((vremote[p]||[]).length)groups.push(['Dari akun',vremote[p]]);
   }
   vcur=[];
-  sel.innerHTML=groups.map(([g,arr])=>`<optgroup label="${esc(g)}">`+arr.map(v=>{vcur.push(v);return `<option value="${vcur.length-1}">${esc(v.name)}</option>`}).join('')+'</optgroup>').join('')
-    ||'<option value="">Belum ada suara. Buat clone atau muat dari akun.</option>';
+  const any=groups.some(([,arr])=>arr.length);
+  sel.innerHTML=any
+    ?groups.map(([g,arr])=>`<optgroup label="${esc(g)}">`+arr.map(v=>{vcur.push(v);return `<option value="${vcur.length-1}">${esc(v.name)}</option>`}).join('')+'</optgroup>').join('')
+    :'<option value="">Belum ada suara. Buat clone atau muat dari akun.</option>';
 }
 $('#vo-load').onclick=async()=>{
   const p=vprov;$('#vo-load').disabled=true;
@@ -1224,6 +1239,7 @@ $('#vc-file').onchange=async e=>{sampleFile=e.target.files[0]||null;if(sampleFil
 $('#vc-clear').onclick=()=>{sampleFile=null;if(rec&&rec.state==='recording')rec.stop();
   $('#vc-file').value='';$('#vc-prev').classList.add('hide');$('#vc-info').classList.add('hide');toast('Sampel dihapus.')};
 function prevSample(){const a=$('#vc-prev');if(!sampleFile){a.classList.add('hide');return}
+  if(a.src&&a.src.startsWith('blob:'))URL.revokeObjectURL(a.src);
   a.src=URL.createObjectURL(sampleFile);a.classList.remove('hide');
   if(samplePrefs.autoplay){try{const p=a.play&&a.play();if(p&&p.catch)p.catch(()=>{})}catch{}}}
 $('#vc-rec').onclick=async()=>{
@@ -1259,6 +1275,8 @@ $('#vc-go').onclick=async()=>{
 
 /* ---------- Generate suara ---------- */
 $('#vo-stop').onclick=()=>{vabort=true;if(window.speechSynthesis)speechSynthesis.cancel()};
+$('#vo-autosave').checked=!!store.get('ms_vasave',false);
+$('#vo-autosave').onchange=e=>{store.set('ms_vasave',e.target.checked);toast(e.target.checked?'Simpan otomatis aktif.':'Simpan otomatis dimatikan.')};
 $('#vo-go').onclick=async()=>{
   const p=vprov,ad=VOICE[p],text=$('#vo-text').value.trim();
   if(!text)return setStatus('#vo-status','Tulis naskah dulu.','err');
@@ -1270,6 +1288,7 @@ $('#vo-go').onclick=async()=>{
   vabort=false;
   if(p==='device'){
     if(!window.speechSynthesis)return setStatus('#vo-status','Browser ini tidak mendukung suara perangkat.','err');
+    clearVoiceOut();
     speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
     const dv=speechSynthesis.getVoices().find(v=>v.name===voice.id);if(dv)u.voice=dv;
     u.rate=vstyle==='tenang'?.85:vstyle==='semangat'?1.15:1;
@@ -1277,7 +1296,7 @@ $('#vo-go').onclick=async()=>{
     setStatus('#vo-status','Memutar langsung dari perangkat…','wait');speechSynthesis.speak(u);return;
   }
   const chunks=chunkText(text,ad.max),parts=[];
-  $('#vo-go').disabled=true;$('#vo-out').innerHTML='';
+  $('#vo-go').disabled=true;clearVoiceOut();
   const pg=$('#vo-prog');pg.classList.remove('hide');
   try{
     for(let i=0;i<chunks.length;i++){
@@ -1288,29 +1307,135 @@ $('#vo-go').onclick=async()=>{
     }
     pg.firstElementChild.style.width='100%';
     showVoice(parts);
-    setStatus('#vo-status','Selesai. '+chunks.length+' bagian disintesis.','ok');
+    setStatus('#vo-status','Selesai. '+chunks.length+' bagian disintesis. Klik “Simpan suara” untuk menyimpan ke komputer.','ok');
+    if($('#vo-autosave').checked)autoSaveVoice(parts);
   }catch(e){setStatus('#vo-status',e.message,'err');log(e.message,'err')}
   finally{$('#vo-go').disabled=false;setTimeout(()=>pg.classList.add('hide'),800)}
 };
-function showVoice(parts){
+/* ---------- Simpan berkas ke komputer ---------- */
+const SAVE_MAX_MB=180;
+function stampName(ext,base){
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return `${base||'suara'}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${String(ext||'mp3').replace(/[^a-z0-9]/gi,'').toLowerCase()||'mp3'}`;
+}
+function blobToB64(blob){
+  if(blob.size>SAVE_MAX_MB*1024*1024)
+    throw new Error(`Audio ${(blob.size/1048576).toFixed(0)} MB terlalu besar untuk dialog simpan (maks ${SAVE_MAX_MB} MB).`);
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]||'');
+    r.onerror=()=>rej(r.error||new Error('Gagal membaca berkas audio.'));
+    r.readAsDataURL(blob);
+  });
+}
+function downloadBlob(blob,name){
+  const u=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=u;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),8000);
+  return {ok:true,web:true,name};
+}
+async function saveAudioFile(blob,name,silent){
+  if(!blob)throw new Error('Tidak ada audio untuk disimpan.');
+  if(!window.desktop?.saveAudio)return downloadBlob(blob,name);
+  const r=await window.desktop.saveAudio({name,ext:String(name).split('.').pop(),data:await blobToB64(blob),silent:!!silent});
+  if(!r)throw new Error('Gagal menyimpan file.');
+  if(r.canceled)return {canceled:true};
+  if(!r.ok)throw new Error(r.error||'Gagal menyimpan file.');
+  return r;
+}
+async function saveRemoteAudio(url,name){
+  if(!url)throw new Error('Link audio tidak tersedia.');
+  if(window.desktop?.saveAudio){
+    try{
+      const res=await fetch(url);
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      return await saveAudioFile(await res.blob(),name);
+    }catch(e){log('Gagal mengambil audio, lanjut ke unduhan langsung: '+e.message,'err')}
+  }
+  // Lewat manajer unduhan: file belum tentu ada, jadi jangan lapor "tersimpan".
+  if(window.desktop?.download){toast('Pilih lokasi penyimpanan…');await window.desktop.download(url);return {ok:true,viaDownload:true}}
+  window.open(url,'_blank','noopener');
+  return {ok:true,viaDownload:true};
+}
+function clearVoiceOut(){
   if(vurl){URL.revokeObjectURL(vurl);vurl=null}
+  vpartURLs.forEach(u=>URL.revokeObjectURL(u));vpartURLs=[];
+  vblob=null;vfile=null;
+  $('#vo-out').innerHTML='';
+}
+function showVoice(parts){
+  clearVoiceOut();
   const out=$('#vo-out');
+  if(!parts.length)return;
   if(parts.every(x=>x.pcm||x.blob)&&(parts.every(x=>x.pcm)||parts.every(x=>x.blob))){
     const pcm=parts.every(x=>x.pcm);
     const blob=pcm?pcmToWav(parts.map(x=>x.pcm),parts[0].rate):new Blob(parts.map(x=>x.blob),{type:parts[0].blob.type||'audio/mpeg'});
     const ext=pcm||/wav/.test(blob.type)?'wav':'mp3';
-    vurl=URL.createObjectURL(blob);
-    out.innerHTML=`<audio controls src="${vurl}" style="width:100%;margin-top:14px"></audio><div class="bar"><a class="btn sec sm" href="${vurl}" download="suara-${Date.now()}.${ext}">Unduh ${ext.toUpperCase()}</a></div><div class="hint">Audio ini tidak disimpan otomatis. Unduh sebelum menutup halaman.</div>`;
+    vurl=URL.createObjectURL(blob);vblob=blob;
+    vfile=stampName(ext);
+    out.innerHTML=`<audio controls src="${vurl}" style="width:100%;margin-top:14px"></audio>
+      <div class="bar"><button class="btn" id="vo-save">Simpan suara</button><button class="btn sec sm hide" id="vo-open">Buka folder</button></div>
+      <div class="hint">Klik “Simpan suara” untuk memilih folder di komputer dan menyimpan file ini. <code>${esc(vfile)}</code></div>`;
+    $('#vo-save').onclick=()=>doSaveAudio();
   }else{
-    out.innerHTML=parts.map((x,i)=>`<div style="margin-top:12px"><small>Bagian ${i+1}</small><audio controls src="${esc(x.url||URL.createObjectURL(x.blob))}" style="width:100%"></audio>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Buka / unduh</a>`:''}</div>`).join('')+'<div class="hint">Penyedia mengembalikan link sementara. Unduh segera karena bisa kedaluwarsa.</div>';
+    out.innerHTML=parts.map((x,i)=>{
+      const src=x.url||(vpartURLs[vpartURLs.length]=URL.createObjectURL(x.blob));
+      return `<div style="margin-top:12px"><small>Bagian ${i+1}</small><audio controls src="${esc(src)}" style="width:100%"></audio>
+        <div class="bar"><button class="btn sec sm" data-save="${i}">Simpan suara</button>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Buka / unduh</a>`:''}</div></div>`;
+    }).join('')+'<div class="hint">Penyedia mengembalikan link sementara. Simpan segera karena bisa kedaluwarsa.</div>';
+    out.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveVoicePart(parts,b));
   }
+  if(typeof applyLang==='function')applyLang();
+}
+async function saveVoicePart(parts,btn){
+  const x=parts[+btn.dataset.save];if(!x)return;
+  btn.disabled=true;
+  try{
+    const nm=stampName('mp3','bagian-'+(+btn.dataset.save+1));
+    const r=x.blob?await saveAudioFile(x.blob,nm):await saveRemoteAudio(x.url,nm);
+    if(!r||r.canceled)return;
+    if(r.viaDownload)toast('Dialog simpan dibuka, pilih lokasi file.');
+    else toast('Tersimpan: '+(r.name||r.path));
+  }catch(e){toast(e.message);log(e.message,'err')}
+  finally{btn.disabled=false}
+}
+async function autoSaveVoice(parts){
+  try{
+    if(vblob){const r=await doSaveAudio(true);return r&&!r.canceled}
+    let n=0;
+    for(let i=0;i<parts.length;i++){
+      const b=$('#vo-out [data-save="'+i+'"]');if(!b)continue;
+      await saveVoicePart(parts,b);n++;
+    }
+    if(n)toast('Otomatis tersimpan '+n+' berkas.');
+    return n>0;
+  }catch(e){setStatus('#vo-status','Simpan otomatis gagal: '+e.message,'err');log(e.message,'err');return false}
+}
+async function doSaveAudio(silent){
+  if(!vblob)return null;
+  const b=$('#vo-save');
+  if(b&&!silent)b.disabled=true;
+  try{
+    const r=await saveAudioFile(vblob,vfile,silent);
+    if(!r||r.canceled)return r;
+    setStatus('#vo-status','Selesai. Audio tersimpan di '+(r.path||r.name)+'.','ok');
+    toast('Tersimpan: '+(r.name||r.path));
+    const o=$('#vo-open');
+    if(o&&r.path&&window.desktop?.reveal){o.classList.remove('hide');o.onclick=()=>window.desktop.reveal(r.path)}
+    return r;
+  }catch(e){
+    setStatus('#vo-status',(silent?'Simpan otomatis gagal: ':'')+e.message,'err');
+    if(!silent)toast(e.message);
+    log(e.message,'err');
+    return null;
+  }finally{if(b&&!silent)b.disabled=false}
 }
 
 /* ---------- Pustaka suara ---------- */
 function renderVLib(){
   const box=$('#vl-list');
   if(!vlib.length){box.innerHTML='<div class="hint" style="margin:0">Belum ada suara clone. Buka menu Buat suara, pilih penyedia yang mendukung clone, lalu unggah sampel.</div>';return}
-  box.innerHTML=vlib.map(v=>`<div class="vrow"><div><b>${esc(v.name)}</b><br><small style="color:var(--muted)">${VOICE[v.provider]?VOICE[v.provider].name:v.provider} · ${new Date(v.ts).toLocaleDateString('id-ID')} · <code>${esc(v.voiceId)}</code></small></div>
+  box.innerHTML=vlib.map(v=>`<div class="vrow"><div><b>${esc(v.name)}</b><br><small style="color:var(--muted)">${esc(VOICE[v.provider]?VOICE[v.provider].name:v.provider)} · ${new Date(v.ts).toLocaleDateString('id-ID')} · <code>${esc(v.voiceId)}</code></small></div>
     <button class="btn sec sm" data-use="${v.id}">Pakai</button><button class="btn danger sm" data-del="${v.id}">Hapus</button></div>`).join('');
   box.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{const v=vlib.find(x=>x.id===b.dataset.use);vprov=v.provider;vmode='use';$('#vo-prov').value=vprov;store.set('ms_vprov',vprov);applyProv();go('voice');
     const i=vcur.findIndex(x=>x.id===v.voiceId);if(i>=0)$('#vo-voice').value=i});
@@ -1320,7 +1445,7 @@ function renderVLib(){
 /* =====================================================================
    PREFERENSI — tema, bahasa aplikasi, pengaturan sampel suara
    ===================================================================== */
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.2.0';
 const THEMES=[
   {id:'gelap',label:'Gelap',dot:'#ff6b8b'},
   {id:'terang',label:'Terang',dot:'#d6336c'},
@@ -1355,9 +1480,10 @@ function saveSamplePrefs(){
   .forEach(s=>{const el=$(s);if(el)el.onchange=saveSamplePrefs});
 $('#pref-smp-reset').onclick=()=>{samplePrefs={...SAMPLE_DEF};store.set('ms_sample',samplePrefs);applySamplePrefs();renderPrefs();toast('Pengaturan sampel dikembalikan ke default.')};
 $('#pref-lang').onchange=e=>{lang=e.target.value;store.set('ms_lang',lang);applyLang();renderPrefs();toast(lang==='en'?'Language changed.':'Bahasa diubah.')};
-$('#pref-reset').onclick=()=>{if(!confirm('Reset tema, bahasa, dan pengaturan sampel ke default?'))return;
+$('#pref-reset').onclick=()=>{if(!confirm('Reset tema, bahasa, pengaturan sampel, dan simpan otomatis ke default?'))return;
   theme='gelap';lang='id';samplePrefs={...SAMPLE_DEF};
-  store.set('ms_theme',theme);store.set('ms_lang',lang);store.set('ms_sample',samplePrefs);
+  store.set('ms_theme',theme);store.set('ms_lang',lang);store.set('ms_sample',samplePrefs);store.set('ms_vasave',false);
+  $('#vo-autosave').checked=false;
   applyTheme();applyLang();applySamplePrefs();renderPrefs();toast('Preferensi direset.')};
 
 /* =====================================================================
@@ -1368,7 +1494,7 @@ const I18N={
   id:{},
   en:{
     "Generate":"Generate","Suara":"Voice","Alat":"Tools","Pengaturan":"Settings","Library":"Library","Debug":"Debug",
-    "Generate musik":"Generate song","Upload & cover":"Upload & cover","Buat suara":"Create voice","Pustaka suara":"Voice library",
+    "Generate musik":"Generate music","Upload & cover":"Upload & cover","Buat suara":"Create voice","Pustaka suara":"Voice library",
     "Buat video MP4":"Create MP4 video","Convert ke WAV":"Convert to WAV","Ambil lirik":"Get lyrics","Cek status task":"Check task status",
     "Multi API key":"Multi API key","Preferensi":"Preferences","Riwayat":"History","Unduhan":"Downloads",
     "Log generate":"Generate log","Log aktivitas":"Activity log","Donate":"Donate",
@@ -1393,13 +1519,18 @@ const I18N={
     "Penyedia suara":"Voice provider","Suara":"Voice","Tema aplikasi":"App theme","Bahasa aplikasi":"App language",
     "Pengaturan sampel suara":"Voice sample settings","Durasi minimum":"Minimum duration","Durasi maksimum":"Maximum duration",
     "Ukuran berkas maksimum":"Maximum file size","Format diizinkan":"Allowed formats","Instrumental, tanpa vokal":"Instrumental, no vocals",
-    "Generate musik":"Generate music","Generate cover":"Generate cover","Buat video":"Create video","Convert ke WAV":"Convert to WAV",
+    "Generate cover":"Generate cover","Buat video":"Create video","Convert ke WAV":"Convert to WAV",
     "Stop":"Stop","Salin lirik":"Copy lyrics","Cek sekali":"Check once","Auto cek tiap 10 detik":"Auto-check every 10 seconds",
     "Simpan key":"Save key","Reset statistik":"Reset statistics","Ekspor":"Export","Impor":"Import","Simpan alamat":"Save addresses",
     "Kembalikan default":"Restore defaults","Muat ulang":"Reload","Hapus semua":"Delete all","Bersihkan":"Clear",
     "Reset semua preferensi":"Reset all preferences","Kembalikan default sampel":"Restore sample defaults",
     "Muat dari akun":"Load from account","Rekam dari mikrofon":"Record from microphone","Hapus sampel":"Remove sample",
     "Buat clone suara":"Create voice clone","Generate suara":"Generate voice","Berhenti":"Stop","Pakai":"Use","Hapus":"Delete",
+    "Simpan suara":"Save voice","Buka folder":"Open folder",
+    "Klik “Simpan suara” untuk memilih folder di komputer dan menyimpan file ini.":"Click “Save voice” to pick a folder on your computer and save this file.",
+    "Langsung simpan otomatis ke folder terakhir":"Auto-save to the last used folder",
+    "Simpan otomatis aktif.":"Auto-save is on.","Simpan otomatis dimatikan.":"Auto-save is off.",
+    "Penyedia mengembalikan link sementara. Simpan segera karena bisa kedaluwarsa.":"The provider returned a temporary link. Save it right away because it can expire.",
     "Deskripsi suara dan gaya bicara":"Voice and speaking style description","Sampel suara":"Voice sample",
     "Bahasa suara":"Voice language","Pilih otomatis suara yang baru di-clone":"Auto-select the newly cloned voice",
     "Putar pratinjau sampel otomatis setelah dipilih":"Auto-play the sample preview once selected",

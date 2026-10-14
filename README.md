@@ -20,6 +20,9 @@ menjadi aplikasi Windows dan Linux dengan auto-update.
 - **Clone suara** dari unggahan file atau rekaman mikrofon, plus gaya bicara
   (netral, semangat, bercerita, tenang, ramah)
 - **Pustaka suara** untuk menyimpan dan memakai ulang hasil clone
+- **Simpan hasil suara ke komputer**: tombol `Simpan suara` membuka dialog simpan
+  native (pilih folder mana pun), plus `Buka folder` untuk membuka lokasinya.
+  Tersedia juga **simpan otomatis** ke folder terakhir tanpa dialog
 - **Pengaturan sampel suara**: batas durasi min/maks, ukuran berkas, format,
   auto-pilih suara baru, auto-putar pratinjau, dan pernyataan izin
 - **Tema aplikasi**: Gelap, Terang, Samudra, Senja
@@ -82,13 +85,41 @@ satu platform saja.
 
 ```
 SelfMusic-Studio.html   # Antarmuka aplikasi (UI + logika)
-electron/main.cjs       # Proses utama Electron + auto-update + unduhan
+electron/main.cjs       # Proses utama Electron + auto-update + unduhan + simpan berkas
 electron/preload.cjs    # Bridge aman (contextBridge) ke renderer
 Asset/                  # Ikon dan logo
 BUILD.md                # Catatan build detail
 ```
 
 ## Changelog
+
+### 1.2.0
+
+Perbaikan pada modul suara dan keamanan aplikasi:
+
+- **Simpan hasil suara ke komputer**. Setelah `Generate suara` selesai, muncul
+  tombol **Simpan suara** yang membuka dialog simpan native sehingga file MP3/WAV
+  bisa ditaruh di folder mana pun, dan tombol **Buka folder** untuk membuka
+  lokasinya di file manager.
+- **Simpan otomatis** (checkbox di menu `Buat suara`): hasil generate langsung
+  ditulis ke folder terakhir yang dipakai tanpa membuka dialog, dengan nama
+  berkas bercap waktu dan tanpa menimpa berkas yang sudah ada.
+- Tombol **Simpan suara** juga tersedia per bagian untuk penyedia yang hanya
+  mengembalikan link sementara (mis. Qwen).
+- Perbaikan: tombol unduh audio hasil generate sebelumnya tidak berfungsi di
+  aplikasi desktop karena `downloadURL` hanya menerima URL `http(s)`. Semua
+  unduhan berbasis `blob:` sekarang melalui dialog simpan native.
+- Perbaikan: memilih "Suara perangkat" tidak lagi meninggalkan hasil generate
+  sebelumnya (dan tombol simpan yang sudah aktif) di layar.
+- Perbaikan: teks antarmuka pada hasil generate kini ikut mengikuti bahasa
+  aplikasi tanpa perlu pindah menu.
+- Keamanan: impor berkas JSON API key tidak lagi bisa menyisipkan HTML/JS ke
+  daftar key (stored XSS). Nama berkas dan ekstensi yang dikirim ke disk
+  dibersihkan, dan navigasi `file:` dibatasi ke berkas aplikasi.
+- Perbaikan: kebocoran object URL pada ekspor key/CSV dan pratinjau sampel suara.
+- Perbaikan: klik ganda pada "Simpan suara" tidak lagi mengirim berkas dua kali.
+- Batas ukuran berkas 180 MB untuk dialog simpan agar aplikasi tidak kehabisan
+  memori pada naskah yang sangat panjang.
 
 ### 1.1.0
 

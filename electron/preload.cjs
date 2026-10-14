@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('desktop', {
   resume: (id) => ipcRenderer.invoke('dl:resume', id),
   cancel: (id) => ipcRenderer.invoke('dl:cancel', id),
   reveal: (savePath) => ipcRenderer.invoke('dl:reveal', savePath),
+  saveAudio: (payload) => ipcRenderer.invoke('audio:save', payload),
   onUpdate: (cb) => { ipcRenderer.on('dl:update', (event, data) => cb(data)); }
 });

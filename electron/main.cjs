@@ -1,9 +1,12 @@
 const { app, BrowserWindow, shell, dialog, ipcMain, session, Menu } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
+const fsp = require('node:fs/promises');
 
 let mainWindow = null;
 const downloads = new Map();
 let downloadSeq = 0;
+let lastSaveDir = null;
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -29,10 +32,10 @@ function createWindow() {
   });
 
   window.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file:')) {
-      event.preventDefault();
-      if (url.startsWith('https:')) shell.openExternal(url);
-    }
+    const appFile = path.join(__dirname, '..', 'SelfMusic-Studio.html');
+    if (url.startsWith('file:') && path.resolve(decodeURIComponent(new URL(url).pathname)) === path.resolve(appFile)) return;
+    event.preventDefault();
+    if (url.startsWith('https:')) shell.openExternal(url);
   });
 
   window.loadFile(path.join(__dirname, '..', 'SelfMusic-Studio.html'));
@@ -126,6 +129,104 @@ function setupDownloads() {
   });
 }
 
+const AUDIO_FILTERS = {
+  mp3: ['Audio MP3', 'mp3'],
+  mpeg: ['Audio MP3', 'mp3'],
+  wav: ['Audio WAV', 'wav'],
+  webm: ['Audio WebM', 'webm'],
+  ogg: ['Audio OGG', 'ogg'],
+  opus: ['Audio Opus', 'opus'],
+  m4a: ['Audio M4A', 'm4a'],
+  flac: ['Audio FLAC', 'flac']
+};
+
+function safeExt(value) {
+  const ext = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return ext || 'mp3';
+}
+
+function safeName(value) {
+  const name = path
+    .basename(String(value || ''))
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .trim();
+  if (!name || name === '.' || name === '..') return 'suara.mp3';
+  return name;
+}
+
+function audioFilters(ext) {
+  const hit = AUDIO_FILTERS[ext];
+  return [
+    { name: hit ? hit[0] : 'Audio', extensions: [hit ? hit[1] : ext] },
+    { name: 'Semua berkas', extensions: ['*'] }
+  ];
+}
+
+function uniquePath(dir, name) {
+  let target = path.join(dir, name);
+  if (!fs.existsSync(target)) return target;
+  const base = name.replace(/\.[^.]+$/, '');
+  const ext = path.extname(name) || '.mp3';
+  let n = 1;
+  do {
+    target = path.join(dir, `${base} (${++n})${ext}`);
+  } while (fs.existsSync(target));
+  return target;
+}
+
+function saveDir() {
+  if (lastSaveDir) {
+    try {
+      if (fs.statSync(lastSaveDir).isDirectory()) return lastSaveDir;
+    } catch {}
+  }
+  return app.getPath('downloads');
+}
+
+async function writeAudio(filePath, data) {
+  if (typeof data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(data)) {
+    return { ok: false, error: 'Data audio tidak valid.' };
+  }
+  const buf = Buffer.from(data, 'base64');
+  if (!buf.length) return { ok: false, error: 'Data audio kosong.' };
+  await fsp.writeFile(filePath, buf);
+  return { ok: true, path: filePath, name: path.basename(filePath), size: buf.length };
+}
+
+function setupFileSave() {
+  ipcMain.handle('audio:save', async (event, payload) => {
+    try {
+      const p = payload || {};
+      const name = safeName(p.name);
+      const ext = safeExt(p.ext || name.split('.').pop());
+      const dir = saveDir();
+
+      let filePath;
+      if (p.silent) {
+        // Simpan tanpa dialog, ke folder terakhir (atau Downloads).
+        await fsp.mkdir(dir, { recursive: true });
+        filePath = uniquePath(dir, name);
+      } else {
+        const win = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+        const res = await dialog.showSaveDialog(win, {
+          title: 'Simpan audio',
+          defaultPath: path.join(dir, name),
+          buttonLabel: 'Simpan',
+          filters: audioFilters(ext)
+        });
+        if (res.canceled || !res.filePath) return { ok: false, canceled: true };
+        filePath = res.filePath;
+      }
+
+      const out = await writeAudio(filePath, p.data);
+      if (out.ok) lastSaveDir = path.dirname(filePath);
+      return out;
+    } catch (error) {
+      return { ok: false, error: (error && error.message) || 'Gagal menyimpan file.' };
+    }
+  });
+}
+
 function buildMenu() {
   const template = [
     ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
@@ -193,6 +294,7 @@ function setupAutoUpdater() {
 app.whenReady().then(() => {
   buildMenu();
   setupDownloads();
+  setupFileSave();
   createWindow();
   setupAutoUpdater();
 
