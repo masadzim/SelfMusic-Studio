@@ -94,3 +94,18 @@ npm run release     # builds AppImage + NSIS and publishes to GitHub Releases
 (`latest.yml`, `latest-linux.yml`, `*.blockmap`) that `electron-updater` reads.
 Run `npm run release:linux` or `npm run release:windows` to publish a single
 platform.
+
+> ⚠️ **If the assets are uploaded by hand (`gh release upload`), keep the names
+> byte-identical to what `latest.yml` / `latest-linux.yml` contain.** GitHub
+> rewrites spaces in an asset name to dots, so `SelfMusic Studio Setup 1.3.0.exe`
+> lands as `SelfMusic.Studio.Setup.1.3.0.exe` while the updater still looks for
+> the spaced name — the download then 404s. `npm run release` renames them
+> correctly because electron-builder does the upload. Fix an already-published
+> release without re-uploading:
+>
+> ```sh
+> gh api repos/masadzim/SelfMusic-Studio/releases/tags/v1.3.0 \
+>   --jq '.assets[] | "\(.id)\t\(.name)"'
+> gh api -X PATCH repos/masadzim/SelfMusic-Studio/releases/assets/<id> \
+>   -f name="SelfMusic-Studio-Setup-1.3.0.exe"
+> ```
