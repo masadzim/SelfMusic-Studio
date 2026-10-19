@@ -113,7 +113,9 @@ jobs:
           npm ci --omit=dev
           # Point the tests at the installation itself, so what is verified is
           # the exact files the installer put on disk -- no copying involved.
-          SMS_RESOURCES_PATH="$INSTALL_DIR\\resources" npm test
+          res_win="$(cygpath -w "$INSTALL_MOUNT/resources")"
+          echo "SMS_RESOURCES_PATH=$res_win"
+          SMS_RESOURCES_PATH="$res_win" npm test
 
       - name: Package contains the licence texts
         run: |
