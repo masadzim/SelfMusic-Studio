@@ -467,6 +467,17 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
     <div class="bar"><button class="btn sec sm" id="pref-smp-reset">Kembalikan default sampel</button></div>
   </div>
 
+  <div class="card" id="pref-tts-card">
+    <h3>Suara perangkat (offline)</h3>
+    <p class="sub">Aplikasi memakai eSpeak NG + Piper neural yang sudah disertakan. Kalau punya eSpeak NG versi lain, you can arahkan ke sana.</p>
+    <div class="bar" style="margin-top:10px">
+      <input id="pref-espeak" placeholder="Kosongkan untuk memakai eSpeak bawaan aplikasi" style="flex:1;min-width:220px">
+      <button class="btn sec sm" id="pref-espeak-test">Uji</button>
+      <button class="btn sec sm" id="pref-espeak-clear">Kosongkan</button>
+    </div>
+    <div class="hint" id="pref-espeak-status">Mesin suara: memeriksa…</div>
+  </div>
+
   <div class="card">
     <div class="bar" style="margin-top:0">
       <button class="btn danger sm" id="pref-reset">Reset semua preferensi</button>
@@ -983,6 +994,31 @@ const toDataURL=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>o
 const b64Bytes=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
 const escXml=t=>t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 
+/* Suara perangkat — offline di desktop (eSpeak NG + Piper), speechSynthesis di web */
+const DEVICE_ENGINE=!!(window.desktop&&window.desktop.deviceSynth);
+function deviceTts(text,voice,style){
+  if(DEVICE_ENGINE){
+    return window.desktop.deviceSynth({text,style,espeakOverride:store.get('ms_espeak','')})
+      .then(r=>{
+        if(!r||!r.ok)throw new Error((r&&r.error)||'Sintesis suara perangkat gagal.');
+        return {blob:new Blob([b64Bytes(r.data)],{type:'audio/wav'}),local:true,
+          info:(r.durationSec?r.durationSec+' dtk':'')+(r.sentences?' · '+r.sentences+' kalimat':'')};
+      });
+  }
+  // Versi web: hanya bisa diputar, tidak menghasilkan berkas.
+  return new Promise((ok,no)=>{
+    if(!window.speechSynthesis)return no(new Error('Browser ini tidak mendukung suara perangkat.'));
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const dv=speechSynthesis.getVoices().find(x=>x.name===(voice&&voice.id));
+    if(dv)u.voice=dv;
+    u.rate=STYLES[style]?STYLES[style].rate:1;
+    u.onend=()=>ok({played:true});
+    u.onerror=ev=>no(new Error('Pemutaran suara perangkat gagal: '+((ev&&ev.error)||'tidak diketahui')));
+    speechSynthesis.speak(u);
+  });
+}
+
 const VOICE={
   elevenlabs:{name:'ElevenLabs',modes:['use','clone'],max:4500,models:{def:'eleven_multilingual_v2',list:['eleven_multilingual_v2','eleven_flash_v2_5','eleven_turbo_v2_5','eleven_v3']},
     note:'Mendukung clone suara dari sampel. Biasanya bisa dipanggil langsung dari browser.',
@@ -1087,8 +1123,11 @@ const VOICE={
     tts:async({text,voice})=>{const {res}=await vfetch('deepgram','/v1/speak?encoding=mp3&model='+encodeURIComponent(voice.id),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})},'tts');
       return {blob:await res.blob()}}},
   device:{name:'Suara perangkat (gratis)',modes:['use'],max:100000,nokey:true,
-    note:'Tanpa API key, memakai suara bawaan browser. Hanya bisa diputar langsung, tidak bisa diunduh dan tidak ada clone.',
-    presets:[]}
+    note:DEVICE_ENGINE
+      ? 'Tanpa API key, offline: eSpeak NG + Piper neural di dalam aplikasi. Hasilnya bisa disimpan ke komputer seperti penyedia lain.'
+      : 'Tanpa API key, memakai suara bawaan browser. Butuh Google Chrome + internet, hanya bisa diputar langsung, tidak bisa diunduh dan tidak ada clone.',
+    presets:[],
+    tts:({text,voice,style})=>deviceTts(text,voice,style)}
 };
 const VORDER=['elevenlabs','openai','gemini','google','azure','minimax','cartesia','fish','qwen','deepgram','device'];
 
@@ -1164,6 +1203,24 @@ function initVoice(){
   $('#vo-model').onchange=()=>{const m=store.get('ms_vmodels',{});m[vprov]=$('#vo-model').value.trim();store.set('ms_vmodels',m)};
   $('#vo-text').oninput=()=>$('#vo-count').textContent=$('#vo-text').value.length;
   applyProv();
+  setupDeviceVoices();
+}
+/* Jalur web: daftar suara perangkat sering menyusul setelah halaman siap.
+   Dipasang SEKALI saat load (bukan tiap pilih provider) plus polling pendek,
+   supaya tidak ada keadaan "suara perangkat tidak ada" yang menetap. */
+function setupDeviceVoices(){
+  if(DEVICE_ENGINE||!window.speechSynthesis)return;
+  let done=false;
+  const once=()=>{
+    if(done)return;done=true;
+    speechSynthesis.removeEventListener('voiceschanged',once);
+    if(vprov==='device')refreshVoices();
+  };
+  speechSynthesis.addEventListener('voiceschanged',once);
+  [300,1000,2500].forEach(t=>setTimeout(()=>{
+    if(done)return;
+    if(speechSynthesis.getVoices().length){once()}else if(t===2500)done=true;
+  },t));
 }
 function applyProv(){
   const ad=VOICE[vprov];
@@ -1182,14 +1239,29 @@ function applyProv(){
   $('#vo-load').classList.toggle('hide',!ad.list);
   refreshVoices();
 }
-function refreshVoices(){
+async function refreshVoices(){
   const p=vprov,ad=VOICE[p];
   const sel=$('#vo-voice');if(!sel)return;
   let groups=[];
   if(p==='device'){
-    const dv=(window.speechSynthesis?speechSynthesis.getVoices():[]).map(v=>({id:v.name,name:v.name+' ('+v.lang+')'}));
-    groups.push(['Suara perangkat',dv]);
-    if(window.speechSynthesis&&speechSynthesis.onvoiceschanged===null)speechSynthesis.onvoiceschanged=refreshVoices;
+    const keep=sel.value;
+    if(DEVICE_ENGINE){
+      sel.innerHTML='<option value="">Memuat suara perangkat…</option>';
+      let res=null;
+      try{res=await window.desktop.deviceVoices(store.get('ms_espeak',''))}catch(e){res={ok:false,error:e.message}}
+      if(!res||!res.ok){
+        sel.innerHTML='<option value="">Mesin suara offline tidak tersedia</option>';
+        const n=VOICE.device.note;
+        setStatus('#vo-status',(res&&res.error)||'Suara perangkat tidak tersedia. '+n,'err');
+        log((res&&res.error)||'Suara perangkat tidak tersedia','err');
+        return;
+      }
+      groups.push(['Suara perangkat (offline)',res.voices]);
+    }else{
+      const dv=(window.speechSynthesis?speechSynthesis.getVoices():[]).map(v=>({id:v.name,name:v.name+' ('+v.lang+')'}));
+      groups.push(['Suara perangkat',dv]);
+      if(!dv.length)setStatus('#vo-status','Browser belum melaporkan suara perangkat. Butuh Google Chrome + internet.','err');
+    }
   }else{
     if(ad.presets.length)groups.push(['Bawaan',ad.presets]);
     const mine=vlib.filter(v=>v.provider===p).map(v=>({id:v.voiceId,name:v.name,model:v.model}));
@@ -1201,6 +1273,7 @@ function refreshVoices(){
   sel.innerHTML=any
     ?groups.map(([g,arr])=>`<optgroup label="${esc(g)}">`+arr.map(v=>{vcur.push(v);return `<option value="${vcur.length-1}">${esc(v.name)}</option>`}).join('')+'</optgroup>').join('')
     :'<option value="">Belum ada suara. Buat clone atau muat dari akun.</option>';
+  if(keep!==''&&+keep<vcur.length)sel.value=keep;
 }
 $('#vo-load').onclick=async()=>{
   const p=vprov;$('#vo-load').disabled=true;
@@ -1286,28 +1359,30 @@ $('#vo-go').onclick=async()=>{
   if(vmode==='design'&&!desc)return setStatus('#vo-status','Isi deskripsi suara dulu.','err');
   const instr=(desc?desc+'. ':'')+STYLES[vstyle].instr;
   vabort=false;
-  if(p==='device'){
-    if(!window.speechSynthesis)return setStatus('#vo-status','Browser ini tidak mendukung suara perangkat.','err');
-    clearVoiceOut();
-    speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
-    const dv=speechSynthesis.getVoices().find(v=>v.name===voice.id);if(dv)u.voice=dv;
-    u.rate=vstyle==='tenang'?.85:vstyle==='semangat'?1.15:1;
-    u.onend=()=>setStatus('#vo-status','Selesai diputar.','ok');
-    setStatus('#vo-status','Memutar langsung dari perangkat…','wait');speechSynthesis.speak(u);return;
-  }
   const chunks=chunkText(text,ad.max),parts=[];
   $('#vo-go').disabled=true;clearVoiceOut();
   const pg=$('#vo-prog');pg.classList.remove('hide');
   try{
     for(let i=0;i<chunks.length;i++){
       if(vabort)throw new Error('Dihentikan.');
-      setStatus('#vo-status','Menyintesis bagian '+(i+1)+' dari '+chunks.length+'…','wait');
+      setStatus('#vo-status',p==='device'
+        ? 'Menyintesis suara perangkat ('+(i+1)+' dari '+chunks.length+')…'
+        : 'Menyintesis bagian '+(i+1)+' dari '+chunks.length+'…','wait');
       pg.firstElementChild.style.width=(i/chunks.length*100)+'%';
       parts.push(await ad.tts({text:chunks[i],voice,style:vstyle,instr,model:((store.get('ms_vmodels',{})[p]||'').trim()||(ad.models&&ad.models.def)||''),lang:$('#vo-lang').value}));
     }
     pg.firstElementChild.style.width='100%';
+    // Jalur web untuk suara perangkat hanya memutar, tidak menghasilkan berkas.
+    if(parts.length===1&&parts[0]&&parts[0].played){
+      setStatus('#vo-status','Selesai diputar. Di versi web suara perangkat tidak bisa disimpan — pakai aplikasi desktop atau penyedia API.','ok');
+      if($('#vo-autosave').checked)log('Simpan otomatis dilewati: suara perangkat versi web tidak menghasilkan berkas.','err');
+      return;
+    }
     showVoice(parts);
-    setStatus('#vo-status','Selesai. '+chunks.length+' bagian disintesis. Klik “Simpan suara” untuk menyimpan ke komputer.','ok');
+    const info=parts[0]&&parts[0].info?' ('+parts[0].info+')':'';
+    setStatus('#vo-status',p==='device'
+      ? 'Selesai'+info+'. Klik “Simpan suara” untuk menyimpan ke komputer.'
+      : 'Selesai. '+chunks.length+' bagian disintesis. Klik “Simpan suara” untuk menyimpan ke komputer.','ok');
     if($('#vo-autosave').checked)autoSaveVoice(parts);
   }catch(e){setStatus('#vo-status',e.message,'err');log(e.message,'err')}
   finally{$('#vo-go').disabled=false;setTimeout(()=>pg.classList.add('hide'),800)}
@@ -1374,16 +1449,23 @@ function showVoice(parts){
     vurl=URL.createObjectURL(blob);vblob=blob;
     vfile=stampName(ext);
     out.innerHTML=`<audio controls src="${vurl}" style="width:100%;margin-top:14px"></audio>
-      <div class="bar"><button class="btn" id="vo-save">Simpan suara</button><button class="btn sec sm hide" id="vo-open">Buka folder</button></div>
+      <div class="bar acts"><button class="btn" id="vo-save">Simpan suara</button><button class="btn sec sm hide" id="vo-open">Buka folder</button></div>
       <div class="hint">Klik “Simpan suara” untuk memilih folder di komputer dan menyimpan file ini. <code>${esc(vfile)}</code></div>`;
     $('#vo-save').onclick=()=>doSaveAudio();
   }else{
     out.innerHTML=parts.map((x,i)=>{
       const src=x.url||(vpartURLs[vpartURLs.length]=URL.createObjectURL(x.blob));
+      // "Unduh" memakai data-save (masuk lewat dialog simpan native), bukan link
+      // polos: link polos + target=_blank akan dialihkan ke browser luar oleh
+      // setWindowOpenHandler di electron/main.cjs.
       return `<div style="margin-top:12px"><small>Bagian ${i+1}</small><audio controls src="${esc(src)}" style="width:100%"></audio>
-        <div class="bar"><button class="btn sec sm" data-save="${i}">Simpan suara</button>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Buka / unduh</a>`:''}</div></div>`;
+        <div class="bar acts"><button class="btn sec sm" data-save="${i}">Unduh</button>${x.url?`<button class="btn sec sm" data-open="${i}">Buka di browser</button>`:''}</div></div>`;
     }).join('')+'<div class="hint">Penyedia mengembalikan link sementara. Simpan segera karena bisa kedaluwarsa.</div>';
     out.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveVoicePart(parts,b));
+    out.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{
+      const x=parts[+b.dataset.open];
+      if(x&&x.url)window.open(x.url,'_blank','noopener');
+    });
   }
   if(typeof applyLang==='function')applyLang();
 }
@@ -1402,12 +1484,21 @@ async function saveVoicePart(parts,btn){
 async function autoSaveVoice(parts){
   try{
     if(vblob){const r=await doSaveAudio(true);return r&&!r.canceled}
-    let n=0;
+    let n=0,last=null;
     for(let i=0;i<parts.length;i++){
       const b=$('#vo-out [data-save="'+i+'"]');if(!b)continue;
-      await saveVoicePart(parts,b);n++;
+      const x=parts[i];if(!x)continue;
+      try{
+        const nm=stampName('mp3','bagian-'+(i+1));
+        last=x.blob?await saveAudioFile(x.blob,nm):await saveRemoteAudio(x.url,nm);
+        if(last&&!last.canceled)n++;
+      }catch(e){log('Simpan otomatis bagian '+(i+1)+' gagal: '+e.message,'err')}
     }
-    if(n)toast('Otomatis tersimpan '+n+' berkas.');
+    if(n){
+      const where=last&&(last.path||last.name)?(' — '+last.path):'';
+      toast('Otomatis tersimpan '+n+' berkas tanpa dialog'+where+'.');
+      setStatus('#vo-status','Simpan otomatis: '+n+' berkas tersimpan'+(last&&last.path?(' di '+last.path):'')+'.','ok');
+    }
     return n>0;
   }catch(e){setStatus('#vo-status','Simpan otomatis gagal: '+e.message,'err');log(e.message,'err');return false}
 }
@@ -1418,8 +1509,9 @@ async function doSaveAudio(silent){
   try{
     const r=await saveAudioFile(vblob,vfile,silent);
     if(!r||r.canceled)return r;
-    setStatus('#vo-status','Selesai. Audio tersimpan di '+(r.path||r.name)+'.','ok');
-    toast('Tersimpan: '+(r.name||r.path));
+    const where=r.path||r.name;
+    setStatus('#vo-status','Selesai. Audio tersimpan di '+where+'.','ok');
+    toast('Tersimpan: '+where);
     const o=$('#vo-open');
     if(o&&r.path&&window.desktop?.reveal){o.classList.remove('hide');o.onclick=()=>window.desktop.reveal(r.path)}
     return r;
@@ -1445,7 +1537,7 @@ function renderVLib(){
 /* =====================================================================
    PREFERENSI — tema, bahasa aplikasi, pengaturan sampel suara
    ===================================================================== */
-const APP_VERSION='1.2.0';
+const APP_VERSION='1.3.0';
 const THEMES=[
   {id:'gelap',label:'Gelap',dot:'#ff6b8b'},
   {id:'terang',label:'Terang',dot:'#d6336c'},
@@ -1467,7 +1559,40 @@ function renderPrefs(){
   $('#pref-smp-consent').checked=!!samplePrefs.consent;
   $('#pref-smp-fmt').dataset.prev=samplePrefs.fmt;
   $('#pref-version').textContent=APP_VERSION;
+  renderTtsPrefs();
 }
+function renderTtsPrefs(){
+  const card=$('#pref-tts-card');if(!card)return;
+  if(!DEVICE_ENGINE){card.classList.add('hide');return}
+  $('#pref-espeak').value=store.get('ms_espeak','');
+  const st=$('#pref-espeak-status');
+  st.textContent='Mesin suara: memeriksa…';st.style.borderLeftColor='';
+  window.desktop.deviceTtsStatus(store.get('ms_espeak','')).then(r=>{
+    if(!r)return st.textContent='Status tidak diketahui.';
+    const where={system:'sistem operasi',bundled:'bawaan aplikasi',override:'pilihanmu',none:'—'}[r.engine]||r.engine;
+    if(r.ok){
+      st.textContent='Siap. Sumber: '+where+(r.engine==='bundled'?'':' · abaikan bawaan aplikasi, gunakan '+where)+'. Model Piper: '+esc((r.model||'').split(/[\\/]/).pop()||'-')+'.';
+      st.style.borderLeftColor='var(--accent2)';
+    }else{
+      st.textContent='Belum siap. Sumber: '+where+'. Model Piper tidak ditemukan — pasang ulang aplikasi.';
+      st.style.borderLeftColor='var(--warn)';
+    }
+  }).catch(e=>{st.textContent='Gagal memeriksa: '+e.message;st.style.borderLeftColor='var(--warn)'});
+}
+$('#pref-espeak').onchange=e=>{
+  store.set('ms_espeak',e.target.value.trim());
+  renderTtsPrefs();
+  toast('Lokasi eSpeak NG disimpan.');
+};
+$('#pref-espeak-clear').onclick=()=>{store.set('ms_espeak','');$('#pref-espeak').value='';renderTtsPrefs();toast('Kembali memakai eSpeak bawaan aplikasi.')};
+$('#pref-espeak-test').onclick=async()=>{
+  const st=$('#pref-espeak-status');
+  st.textContent='Menguji…';st.style.borderLeftColor='';
+  const v=await window.desktop.deviceVoices(store.get('ms_espeak',''));
+  if(v&&v.ok)toast('Mesin suara siap: '+v.voices.length+' suara ('+v.source+').');
+  else toast('Mesin suara bermasalah: '+((v&&v.error)||'tidak diketahui'));
+  renderTtsPrefs();
+};
 function saveSamplePrefs(){
   const min=Math.max(1,+$('#pref-smp-min').value||SAMPLE_DEF.min);
   let max=Math.max(5,+$('#pref-smp-max').value||SAMPLE_DEF.max);

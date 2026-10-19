@@ -1,2 +1,9 @@
 node_modules/
 dist/
+
+# Aset TTS offline: besar (sekitar 84 MB) dan direproduksi oleh
+# `npm run prepare:assets`. Jangan di-commit -- unduh ulang lewat script itu.
+resources/tts/
+
+# Dipindah aside sementara oleh scripts/stage-tts-assets.cjs saat build.
+resources/.espeak-parked/

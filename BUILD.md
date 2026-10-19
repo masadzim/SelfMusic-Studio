@@ -7,18 +7,65 @@ branding in `Asset/`.
 
 - Node.js and npm
 - Windows packaging on Linux also requires Wine
+- `apt-get` + `dpkg-deb` to unpack the eSpeak NG packages (no root needed)
+- `unzip` (Windows asset fetch) and `wine` or `msiextract` (laying out the
+  official `espeak-ng.msi`) when preparing the Windows assets
 
 ## Commands
 
 ```sh
 npm install
+npm run prepare:assets       # download the Piper model + eSpeak NG (once, ~84 MB)
+npm run prepare:assets:win   # add the Windows eSpeak + MSVC runtime (once, ~24 MB)
 npm start
 npm run build:linux
 npm run build:windows
 ```
 
 Builds are written to `dist/`. Linux creates an AppImage and Windows creates an
-NSIS installer `.exe`.
+NSIS installer `.exe`. `npm run build:linux:deb` produces a `.deb`.
+
+## Offline TTS assets
+
+The app bundles a neural Bahasa Indonesia voice so "Suara perangkat" works
+offline and produces a real file you can save. Two pieces:
+
+- **Piper model** `id_ID-news_tts-medium` (MIT, ~60 MB) from `rhasspy/piper-voices`
+- **eSpeak NG 1.52** binary, shared library and data tree (GPL-3.0, ~26 MB).
+  Linux unpacks it from the distro `.deb` packages, Windows lays it out from the
+  official `espeak-ng.msi`, macOS from Homebrew bottles — all done by
+  `scripts/prepare-tts-assets.mjs`.
+
+`resources/tts/` is git-ignored because of its size. Re-run
+`npm run prepare:assets` to restore it; builds call the `--check` variant first
+and fail with a clear message if the assets are missing. `npm run build:windows`
+checks the Windows assets instead, so a cross-build cannot silently ship a
+package whose offline voice has no engine.
+
+Windows packages also carry `msvcp140.dll`, `vcruntime140.dll` and
+`vcruntime140_1.dll` next to `espeak-ng.exe`: the upstream binary imports them
+and Windows does not provide them, and the whole point of the bundled engine is
+that the user installs nothing. See `THIRD-PARTY-NOTICES.md`.
+
+Because eSpeak NG and its data are GPL-3.0, the distributed app is
+GPL-3.0-or-later. See `THIRD-PARTY-NOTICES.md`.
+
+## Package size
+
+`scripts/prune-onnxruntime.mjs` runs before every build and:
+
+- deletes the CUDA provider (259 MB) and TensorRT provider — this app is CPU-only
+- parks the runtimes for other platforms in `node_modules/.onnxruntime-parked`
+  when `--target` is given, so single-platform builds stay much smaller
+- parks the CPU architectures the target cannot load (`linux/arm64` in an x64
+  build, 24 MB) under the same flag
+
+`scripts/stage-tts-assets.cjs` runs as electron-builder's `beforePack` hook and
+moves the eSpeak builds for other platforms into `resources/.espeak-parked`,
+restoring them in `afterPack`. Without it every package would carry ~50 MB of
+dictionaries for engines it cannot run.
+
+Expected package size: roughly 200 MB (up from ~121 MB before 1.3.0).
 
 ## Auto-update
 

@@ -1,10 +1,10 @@
 {
   "name": "selfmusic-studio",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "SelfMusic Studio desktop app for SunoAPI.org and KIE.AI",
   "author": "SelfMusic Studio",
   "homepage": "https://github.com/masadzim/SelfMusic-Studio",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "main": "electron/main.cjs",
   "desktopName": "selfmusic-studio",
@@ -14,15 +14,26 @@
   },
   "scripts": {
     "start": "electron .",
-    "build:linux": "electron-builder --linux AppImage",
-    "build:windows": "electron-builder --win nsis",
+    "prepare:assets": "node scripts/prepare-tts-assets.mjs",
+    "prepare:assets:check": "node scripts/prepare-tts-assets.mjs --check",
+    "prepare:assets:win": "node scripts/prepare-tts-assets.mjs --platform win32-x64",
+    "prepare:assets:check:win": "node scripts/prepare-tts-assets.mjs --check --platform win32-x64",
+    "prune:ort": "node scripts/prune-onnxruntime.mjs",
+    "test": "node scripts/verify-save-pipeline.cjs",
+    "build:linux": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target linux --arch x64 && electron-builder --linux AppImage",
+    "build:linux:deb": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target linux --arch x64 && electron-builder --linux deb && node scripts/finalize-deb.cjs dist/selfmusic-studio_1.3.0_amd64.deb",
+    "build:windows": "npm run prepare:assets:check:win && node scripts/prune-onnxruntime.mjs --target win32 --arch x64 && electron-builder --win nsis",
+    "build:mac": "npm run build:mac:arm64",
+    "build:mac:arm64": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target darwin --arch arm64 && electron-builder --mac --arm64",
+    "build:mac:x64": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target darwin --arch x64 && electron-builder --mac --x64",
     "build": "npm run build:linux && npm run build:windows",
     "release": "electron-builder --linux AppImage --win nsis --publish always",
     "release:linux": "electron-builder --linux AppImage --publish always",
     "release:windows": "electron-builder --win nsis --publish always"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "onnxruntime-node": "^1.30.0"
   },
   "devDependencies": {
     "electron": "^44.0.0",
@@ -37,9 +48,29 @@
     "files": [
       "SelfMusic-Studio.html",
       "Asset/**/*",
+      "COPYING",
+      "LICENSE",
+      "COPYRIGHT-NOTICE.txt",
+      "THIRD-PARTY-NOTICES.md",
+      "resources/license.txt",
       "electron/main.cjs",
       "electron/preload.cjs",
-      "package.json"
+      "electron/tts.cjs",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/tts",
+        "to": "tts",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "beforePack": "./scripts/stage-tts-assets.cjs",
+    "asarUnpack": [
+      "**/node_modules/onnxruntime-node/bin/**"
     ],
     "asar": true,
     "publish": {
@@ -47,6 +78,9 @@
       "owner": "masadzim",
       "repo": "SelfMusic-Studio",
       "releaseType": "release"
+    },
+    "appImage": {
+      "license": "resources/license.txt"
     },
     "linux": {
       "target": [
@@ -63,11 +97,28 @@
       ],
       "icon": "Asset/icon.ico"
     },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "Asset/icon.png",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "SelfMusic Studio memakai mikrofon hanya bila kamu merekam sampel suara untuk clone.",
+        "NSSpeechRecognitionUsageDescription": "Tidak dipakai; hanya untuk Pryatinjau suara perangkat."
+      }
+    },
+    "dmg": {
+      "license": "resources/license.txt"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "license": "resources/license.txt"
     }
   }
 }

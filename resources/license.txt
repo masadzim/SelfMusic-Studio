@@ -1,0 +1,39 @@
+SelfMusic Studio
+Copyright (C) 2026 SelfMusic Studio
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+ID SINGKAT / SHORT SUMMARY (Indonesian)
+-----------------------------------------
+SelfMusic Studio adalah perangkat lunak bebas. Anda boleh menyalin dan
+mendistribusikan ulang, serta memodifikasinya, di bawah ketentuan GNU General
+Public License versi 3 atau versi yang lebih baru.
+
+Aplikasi ini disediakan gratis, tanpa jaminan kegunaan maupun kualitas apa pun.
+Bacalah COPYING untuk teks lisensi lengkap.
+
+
+KODE SUMBER / SOURCE CODE
+-------------------------
+Kode sumber lengkap untuk setiap biner yang dirilis ada di:
+
+  https://github.com/masadzim/SelfMusic-Studio
+
+
+PERANGKAT KETIGA / THIRD PARTY
+------------------------------
+Aplikasi ini menyertakan eSpeak NG (GPL-3.0) dan model suara Piper (MIT).
+Rincian lengkap ada di THIRD-PARTY-NOTICES.md.
+
+Teks lisensi lengkap ada di COPYING (disalin juga di LICENSE).

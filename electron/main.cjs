@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, dialog, ipcMain, session, Menu } = require('e
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const tts = require('./tts.cjs');
 
 let mainWindow = null;
 const downloads = new Map();
@@ -227,6 +228,50 @@ function setupFileSave() {
   });
 }
 
+/* ---------- Offline TTS (eSpeak NG + Piper) ---------- */
+function setupTts() {
+  ipcMain.handle('tts:voices', (event, override) => {
+    try {
+      return tts.listVoices(typeof override === 'string' ? override : undefined);
+    } catch (error) {
+      return { ok: false, error: (error && error.message) || 'Gagal membaca daftar suara.', voices: [] };
+    }
+  });
+
+  ipcMain.handle('tts:synth', async (event, payload) => {
+    try {
+      const p = payload || {};
+      return await tts.synthesize({
+        text: typeof p.text === 'string' ? p.text : '',
+        style: typeof p.style === 'string' ? p.style : 'netral',
+        espeakOverride: typeof p.espeakOverride === 'string' ? p.espeakOverride : undefined
+      });
+    } catch (error) {
+      return { ok: false, error: (error && error.message) || 'Sintesis suara gagal.' };
+    }
+  });
+
+  ipcMain.handle('tts:status', (event, override) => {
+    const espeak = tts.resolveEspeak(typeof override === 'string' ? override : undefined);
+    const model = tts.resolveModel();
+    return {
+      ok: !!(espeak && espeak.data && model),
+      engine: espeak ? espeak.source : 'none',
+      binary: espeak ? espeak.bin : null,
+      dataDir: espeak ? espeak.data : null,
+      model: model || null,
+      styleScale: tts.STYLE_LENGTH_SCALE,
+      maxMb: tts.MAX_OUTPUT_MB
+    };
+  });
+
+  // Muat model sekali saat app siap supaya generate pertama tidak lambat.
+  tts.warmup().then(ok => {
+    if (ok) console.log('[tts] model Piper siap');
+    else console.warn('[tts] model Piper tidak termuat — suara perangkat akan lazily dimuat');
+  });
+}
+
 function buildMenu() {
   const template = [
     ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
@@ -295,6 +340,7 @@ app.whenReady().then(() => {
   buildMenu();
   setupDownloads();
   setupFileSave();
+  setupTts();
   createWindow();
   setupAutoUpdater();
 

@@ -16,7 +16,10 @@ menjadi aplikasi Windows dan Linux dengan auto-update.
 - Cek status task
 - **Buat suara (TTS)** dengan banyak penyedia: ElevenLabs, OpenAI, Google Gemini,
   Google Cloud, Microsoft Azure, MiniMax, Cartesia, Fish Audio, Qwen, Deepgram,
-  dan suara bawaan perangkat (gratis tanpa API key)
+  dan suara perangkat (gratis tanpa API key)
+- **Suara perangkat offline (bawaan paket)**: eSpeak NG + Piper neural untuk
+  Bahasa Indonesia, tanpa internet dan tanpa API key. Hasilnya berupa berkas WAV
+  sehingga **bisa disimpan** seperti penyedia lain
 - **Clone suara** dari unggahan file atau rekaman mikrofon, plus gaya bicara
   (netral, semangat, bercerita, tenang, ramah)
 - **Pustaka suara** untuk menyimpan dan memakai ulang hasil clone
@@ -36,11 +39,16 @@ menjadi aplikasi Windows dan Linux dengan auto-update.
 
 - Node.js dan npm
 - Untuk build Windows di Linux dibutuhkan Wine
+- `dpkg-deb` dan `apt-get` (dipakai script aset untuk membuka paket eSpeak NG
+  tanpa perlu `sudo`)
+- `unzip` (aset Windows) dan `wine` atau `msiextract` (untuk membuka
+  `espeak-ng.msi` resmi)
 
 ## Menjalankan (development)
 
 ```sh
 npm install
+npm run prepare:assets   # unduh model Piper + eSpeak NG (~84 MB, sekali saja)
 npm start
 ```
 
@@ -48,11 +56,35 @@ npm start
 
 ```sh
 npm run build:linux     # AppImage
+npm run build:linux:deb # paket .deb
 npm run build:windows   # NSIS installer (.exe)
-npm run build           # keduanya
+npm run build           # semuanya
 ```
 
 Hasil build ditulis ke folder `dist/`.
+
+### Aset TTS dan ukuran paket
+
+Model Piper (~60 MB) dan data eSpeak NG (~26 MB) ikut di dalam paket supaya
+pengguna tidak perlu memasang apa pun. Total paket naik dari sekitar 121 MB
+menjadi sekitar 200 MB.
+
+`resources/tts/` tidak masuk Git karena terlalu besar; `npm run prepare:assets`
+mengunduhnya kembali. Build memanggil `prepare:assets --check` lebih dulu, jadi
+build gagal dengan pesan jelas kalau asetnya belum ada. Build Windows memakai
+`prepare:assets:check --platform win32-x64`, jadi paket Windows tidak pernah
+terbit tanpa mesin suaranya.
+
+`scripts/prune-onnxruntime.mjs` menghapus provider CUDA (259 MB) dan TensorRT
+karena aplikasi ini hanya memakai CPU, lalu memarkir runtime platform lain
+selama build berlangsung. Kalau hanya membangun untuk satu platform, flag
+`--target` membuat paket jauh lebih kecil lagi; flag `--arch` juga memarkir
+arsitektur CPU yang tidak bisa dimuat (mis. `arm64` 24 MB di paket x64).
+
+`scripts/stage-tts-assets.cjs` sebagai hook `beforePack` memindahkan eSpeak
+untuk platform lain ke `resources/.espeak-parked`, lalu mengembalikannya setelah
+build. Tanpa itu setiap paket membawa ~50 MB kamus untuk engine yang tidak
+pernah dipanggil.
 
 ## Auto-update
 
@@ -87,11 +119,66 @@ satu platform saja.
 SelfMusic-Studio.html   # Antarmuka aplikasi (UI + logika)
 electron/main.cjs       # Proses utama Electron + auto-update + unduhan + simpan berkas
 electron/preload.cjs    # Bridge aman (contextBridge) ke renderer
+electron/tts.cjs        # Mesin suara offline: eSpeak NG + Piper
+scripts/                # Persiapan aset TTS + pruning onnxruntime
+resources/              # license.txt installer (resources/tts/ diabaikan Git)
 Asset/                  # Ikon dan logo
 BUILD.md                # Catatan build detail
+COPYING                 # Teks GPL-3.0
+COPYRIGHT-NOTICE.txt    # Pernyataan lisensi + tautan sumber
+THIRD-PARTY-NOTICES.md  # Lisensi komponen pihak ketiga
 ```
 
 ## Changelog
+
+### 1.3.0
+
+Suara perangkat jadi benar-benar bisa dipakai **dan** bisa disimpan, plus
+penyeragaman UI unduh:
+
+- **Suara perangkat offline (Piper neural + eSpeak NG)**, sudah termasuk di dalam
+  paket. Tidak perlu internet, tidak perlu API key, tidak perlu memasang apa pun.
+  Model Bahasa Indonesia `id_ID-news_tts-medium` (22 050 Hz, 1 suara netral).
+  Hasilnya berkas WAV asli, jadi **tombol `Simpan suara` dan `simpan otomatis`
+  sekarang ikut berfungsi** — sebelumnya jalur ini hanya memutar langsung lalu
+  berhenti tanpa menghasilkan berkas sama sekali.
+- **Gaya bicara memengaruhi tempo suara perangkat**: `tenang` lebih lambat,
+  `semangat` lebih cepat (dipetakan ke `length_scale` Piper).
+- **Mesin suara memakai eSpeak NG sistem bila tersedia**, lalu jatuh ke bawaan
+  paket. Lokasi eSpeak bisa ditimpa di menu `Preferensi` → `Suara perangkat
+  (offline)`, lengkap dengan tombol `Uji` untuk mengeceknya.
+- **Perbaikan: "Simpan suara" dan "simpan otomatis" tidak pernah jalan untuk
+  suara perangkat.** Penyebabnya jalur `device` melakukan `return` lebih dulu,
+  sebelum `showVoice()` dan `autoSaveVoice()` dipanggil.
+- **Perbaikan: link "Buka / unduh" pada hasil Berganda dari penyedia yang hanya
+  mengembalikan link sementara (mis. Qwen) membuka Google Chrome di luar
+  aplikasi.** Sekarang tombolnya `Unduh` (masuk lewat dialog simpan native) dan
+  `Buka di browser` sebagai tindakan terpisah yang disengaja.
+- **Perbaikan: UI unduh modul suara diseragamkan dengan modul musik**, memakai
+  kelas `.acts` yang sama.
+- Toast `simpan otomatis` sekarang menyebut lokasi file tujuan, karena tidak ada
+  dialog yang muncul.
+- **Lisensi berubah dari MIT ke GPL-3.0-or-later**, karena eSpeak NG beserta data
+  kamusnya ikut disertakan. Rilis 1.0.0–1.2.0 tetap MIT.
+- `THIRD-PARTY-NOTICES.md`, `COPYING`, dan `COPYRIGHT-NOTICE.txt` ditambahkan;
+  halaman lisensi muncul di installer NSIS.
+- Build lebih ringan: provider CUDA (259 MB) dan TensorRT dihapus dari paket
+  karena aplikasi hanya memakai CPU, runtime CPU untuk platform lain dan
+  arsitektur lain diparkir, dan tiap paket hanya membawa eSpeak untuk
+  platformnya sendiri.
+- **Suara perangkat offline juga jalan di Windows.** Aset Windows diambil dari
+  installer resmi `espeak-ng.msi` lewat administrative install, karena
+  upstream tidak menyediakan arsip win64, plus `msvcp140.dll`,
+  `vcruntime140.dll`, dan `vcruntime140_1.dll` karena `espeak-ng.exe`
+  mengimpornya dan Windows tidak menyediakannya — tanpa itu mesin suara tidak
+  bisa start di komputer yang bersih.
+- Perbaikan: pencarian eSpeak sistem di Windows sekarang juga mencoba
+  `espeak-ng.exe`, dan suara mbrola yang butuh phonemizer eksternal tidak lagi
+  ikut ditawarkan di daftar suara.
+- Perbaikan: kolom `File` dari `espeak-ng --voices` menunjuk berkas varian
+  opsional (`poz/id`) yang memang tidak pernah dikirim, sehingga Bahasa
+  Indonesia sebelumnya hanya muncul lewat fallback. Sekarang suara aslinya
+  tampil dengan prioritasnya.
 
 ### 1.2.0
 
@@ -146,7 +233,22 @@ Fitur baru dari `voiceclone.html` serta penambahan pengaturan aplikasi:
 
 ## Lisensi
 
-Dirilis di bawah [MIT License](LICENSE).
+Dirilis di bawah **GNU General Public License v3.0 atau yang lebih baru**
+(`GPL-3.0-or-later`). Teks lengkap ada di [COPYING](COPYING).
+
+Rilis 1.0.0 sampai 1.2.0 tetap dibagikan di bawah MIT dan tidak ditarik
+kembali; lisensi yang sudah diberikan tidak bisa dicabut.
+
+### Kenapa GPL-3.0
+
+Sejak 1.3.0 aplikasi menyertakan **eSpeak NG** (mesin fonem, GPL-3.0) beserta
+data kamusnya, dan **model suara Piper** (MIT). Karena data eSpeak juga
+berlisensi GPL-3.0, distribusi gabungannya harus GPL-3.0.
+
+Kode sumber lengkap tersedia di
+<https://github.com/masadzim/SelfMusic-Studio> sesuai kewajiban GPL §6.
+Rincian Lisensi komponen pihak ketiga ada di
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Dukungan
 
