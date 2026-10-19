@@ -101,8 +101,10 @@ jobs:
           # Exactly how electron/tts.cjs calls it: text on stdin, no -f.
           ipa=$(printf 'Halo dunia, selamat pagi!\n' | "$exe" --path "$ENGINE_MOUNT/espeak-ng-data" -v id -q --ipa=2)
           [ -n "$ipa" ] || { echo "::error::tidak ada fonem yang dihasilkan"; exit 1; }
+          echo "$ipa"
           # U+02C8 / U+02D0 are stress marks; without them the phonemizer is off.
-          echo "$ipa" | grep -qP '[\u02c8\u02d0]' || { echo "::error::fonem tanpa tanda stress: $ipa"; exit 1; }
+          # Node rather than grep: PCRE spells it \x{02c8}, not \u02c8.
+          node -e 'if (!/[\u02c8\u02d0]/.test(process.argv[1])) { console.error("fonem tanpa tanda stress: " + process.argv[1]); process.exit(1) }' "$ipa"
           echo "fonem Indonesia: $ipa"
 
       - name: End-to-end synthesis with the shipped assets
