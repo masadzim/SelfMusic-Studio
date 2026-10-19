@@ -7,8 +7,10 @@ name: Windows smoke test
 #
 # Public repository, so the standard GitHub-hosted runner is free.
 #
-# Every step uses bash on purpose: the PowerShell that ships with the runner
-# image failed to start a console host on the first attempt.
+# Every step uses bash on purpose: the PowerShell shipped with the runner image
+# failed to start a console host on the first attempt. MSYS rewrites arguments
+# that look like unix paths, so the switches of cmd and the installer are
+# spelled the MSYS way (`//c`) or excluded from the conversion.
 on:
   workflow_dispatch:
     inputs:
@@ -36,19 +38,6 @@ jobs:
         shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
-      # MSYS rewrites arguments that look like unix paths, so /S and /D= would
-      # reach the installer as "S:/..." and "D=C:/..." -- it would then show a
-      # GUI and hang forever on a runner with no desktop. Off, and the Windows
-      # tools below get single-slash switches; bash still sees /c/sms paths for
-      # its own file operations, but any path handed to a Windows executable has
-      # to be written Windows-style.
-      MSYS_NO_PATHCONV: '1'
-      MSYS2_ARG_CONV_EXCL: '*'
-      # MSYS path for the bash shell, Windows path for the tools it calls.
-      INSTALL_DIR: 'C:\sms'
-      INSTALL_MOUNT: /c/sms
-      ENGINE: 'C:\sms\resources\tts\espeak\win32'
-      ENGINE_MOUNT: /c/sms/resources/tts/espeak/win32
     steps:
       - uses: actions/checkout@v4
 
@@ -66,20 +55,32 @@ jobs:
           ls -la dist/
 
       - name: Install silently
+        env:
+          # Let /S and /D= reach the installer as written; everything else is
+          # still converted, which is what makes //c become /c for cmd.
+          MSYS2_ARG_CONV_EXCL: '/S;/D=*'
         run: |
           installer="dist\\$(ls dist | grep 'Setup' | head -1)"
-          echo "menjalankan: cmd /c start /wait \"\" \"$installer\" /S /D=C:/sms"
-          # start /wait so the shell does not race the installer.
-          if ! timeout 420 cmd /c start /wait "" "$installer" /S /D=C:/sms; then
-            echo "::error::installer tidak selesai dalam 7 menit"
+          echo "menjalankan: $installer /S"
+          if ! timeout 420 cmd //c start //wait "" "$installer" /S; then
+            echo "::error::installer gagal atau menggantung"
             exit 1
           fi
-          if [ ! -f "$INSTALL_MOUNT/SelfMusic Studio.exe" ]; then
-            echo "::error::installer tidak menghasilkan aplikasi di $INSTALL_MOUNT"
-            ls -la "$INSTALL_MOUNT" || true
+          # Default destination, i.e. what a real user gets. Asking NSIS for a
+          # custom /D= path with forward slashes made it silently ignore the
+          # request and install here anyway.
+          programs="$(cygpath -u "$LOCALAPPDATA")/Programs"
+          root="$programs/SelfMusic Studio"
+          if [ ! -f "$root/SelfMusic Studio.exe" ]; then
+            echo "::error::aplikasi tidak ditemukan di $root"
+            ls -la "$programs" 2>/dev/null || true
             exit 1
           fi
-          ls "$INSTALL_MOUNT"
+          {
+            echo "INSTALL_MOUNT=$root"
+            echo "ENGINE_MOUNT=$root/resources/tts/espeak/win32"
+          } >> "$GITHUB_ENV"
+          ls "$root"
 
       - name: eSpeak runs, with the bundled MSVC runtime
         run: |
@@ -92,14 +93,16 @@ jobs:
           engines=$(ls "$INSTALL_MOUNT/resources/tts/espeak")
           [ "$engines" = "win32" ] || { echo "::error::paket membawa engine asing: $engines"; exit 1; }
 
-          voices=$("$exe" --path "$ENGINE" --voices=id)
+          voices=$("$exe" --path "$ENGINE_MOUNT/espeak-ng-data" --voices=id)
           echo "$voices" | grep -q Indonesian || { echo "::error::daftar suara tidak memuat Indonesian"; echo "$voices"; exit 1; }
-          echo "$voices" | grep -i mbrola && { echo "::error::suara mbrola ikut terpasang"; exit 1; } || true
+          if echo "$voices" | grep -qi mbrola; then
+            echo "::error::suara mbrola ikut terpasang"; echo "$voices"; exit 1
+          fi
 
           # Exactly how electron/tts.cjs calls it: text on stdin, no -f.
-          ipa=$(printf 'Halo dunia, selamat pagi!\n' | "$exe" --path "$ENGINE" -v id -q --ipa=2)
+          ipa=$(printf 'Halo dunia, selamat pagi!\n' | "$exe" --path "$ENGINE_MOUNT/espeak-ng-data" -v id -q --ipa=2)
           [ -n "$ipa" ] || { echo "::error::tidak ada fonem yang dihasilkan"; exit 1; }
-          # U+02C8 / U+02D0 = stress marks; without them the phonemizer is off.
+          # U+02C8 / U+02D0 are stress marks; without them the phonemizer is off.
           echo "$ipa" | grep -qP '[\u02c8\u02d0]' || { echo "::error::fonem tanpa tanda stress: $ipa"; exit 1; }
           echo "fonem Indonesia: $ipa"
 
@@ -112,10 +115,8 @@ jobs:
 
       - name: Package contains the licence texts
         run: |
-          # A path handed to a Windows executable has to be Windows-style here.
-          asar="$INSTALL_DIR\\resources\\app.asar"
           [ -f "$INSTALL_MOUNT/resources/app.asar" ] || { echo "::error::app.asar tidak ada"; exit 1; }
-          npx --yes @electron/asar list "$asar" > asar-list.txt
+          npx --yes @electron/asar list "$INSTALL_MOUNT/resources/app.asar" > asar-list.txt
           for entry in /COPYING /LICENSE /COPYRIGHT-NOTICE.txt /THIRD-PARTY-NOTICES.md \
                        /electron/tts.cjs /resources/license.txt; do
             grep -qx "$entry" asar-list.txt || { echo "::error::app.asar tidak memuat $entry"; exit 1; }
@@ -145,9 +146,9 @@ jobs:
           # a guarantee: a GUI-only crash would slip through here.
           "$INSTALL_MOUNT/SelfMusic Studio.exe" &
           sleep 20
-          if ! tasklist /FI "IM eq SelfMusic Studio.exe" /NH | grep -qi "SelfMusic"; then
+          if ! tasklist //FI "IM eq SelfMusic Studio.exe" //NH | grep -qi "SelfMusic"; then
             echo "::warning::aplikasi sudah tidak berjalan setelah 20 detik"
             exit 1
           fi
-          taskkill /IM "SelfMusic Studio.exe" /F || true
+          taskkill //IM "SelfMusic Studio.exe" //F || true
           echo "aplikasi masih hidup setelah 20 detik"
