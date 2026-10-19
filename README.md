@@ -131,6 +131,23 @@ THIRD-PARTY-NOTICES.md  # Lisensi komponen pihak ketiga
 
 ## Changelog
 
+### 1.3.1
+
+Perbaikan untuk rilis 1.3.0, ditemukan oleh smoke test Windows:
+
+- **Perbaikan: suara perangkat tidak bisa jalan di Windows.** Path yang dicari
+  menunjuk `espeak/win32/espeak-ng.exe/espeak-ng.exe` — berkas `.exe`
+  diperlakukan sebagai folder, sehingga mesin suara bawaan tidak pernah
+  ditemukan dan aplikasi menampilkan "Mesin suara offline (eSpeak NG) tidak
+  ditemukan". Rilis 1.3.0 hanya Windows yang terkena; Linux dan macOS tidak.
+- Alasan bugnya ada di sekecil apa pun: kedua cabang path (Windows dan unix)
+  ditulis sebagai satu pemanggilan dengan percabangan di dalam, jadi cabang
+  Windows menyalin nama berkas ke posisi folder. Sekarang keduanya fungsi
+  terpisah, dan tes mengunci aturan "hanya segmen terakhir yang punya ekstensi".
+- Smoke test Windows otomatis (`.github/workflows/windows-smoke.yml`) sekarang
+  ikut jalan setiap rilis: mengunduh installer, memasangnya, menjalankan eSpeak,
+  menyintesis suara sungguhan, dan memeriksa metadata auto-update.
+
 ### 1.3.0
 
 Suara perangkat jadi benar-benar bisa dipakai **dan** bisa disimpan, plus

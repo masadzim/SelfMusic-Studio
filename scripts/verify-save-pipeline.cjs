@@ -69,6 +69,8 @@ Module._load = origLoad;
 const audioSave = handlers.get('audio:save');
 assert(audioSave, 'IPC audio:save tidak terdaftar');
 
+const tts = require(path.join(ROOT, 'electron', 'tts.cjs'));
+
 let pass = 0;
 let fail = 0;
 async function check(name, fn) {
@@ -228,6 +230,23 @@ const call = payload => audioSave({}, payload);
       `tenang (${tenang.durationSec}s) harus lebih panjang dari netral (${netral.durationSec}s)`);
     assert(semangat.durationSec < netral.durationSec,
       `semangat (${semangat.durationSec}s) harus lebih pendek dari netral (${netral.durationSec}s)`);
+  });
+
+  await check('lokasi eSpeak ng untuk tiap platform tersusun benar', () => {
+    // Only the last segment is a file name. Getting this wrong is invisible on
+    // the build machine and fatal on the user's: the engine silently resolves
+    // to nothing.
+    for (const [platform, arch] of [['win32', 'x64'], ['linux', 'x64'], ['linux', 'arm64'], ['darwin', 'arm64']]) {
+      const parts = tts.bundledEngineParts(platform, arch);
+      const dirs = parts.slice(0, -1);
+      for (const seg of dirs) {
+        assert(!seg.includes('.'), `${platform}: "${seg}" bukan folder,path jadi salah`);
+      }
+      assert(/\.exe$/.test(parts[parts.length - 1]) === (platform === 'win32'),
+        `${platform}: berkas terakhir tidak sesuai platform`);
+    }
+    // And the platform this test runs on must really be there.
+    assert(tts.resolveEspeak(''), 'engine bawaan tidak ditemukan di mesin ini');
   });
 
   await check('tts:status melaporkan engine dan peta length_scale', async () => {

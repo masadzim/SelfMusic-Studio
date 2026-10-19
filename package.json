@@ -1,6 +1,6 @@
 {
   "name": "selfmusic-studio",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "SelfMusic Studio desktop app for SunoAPI.org and KIE.AI",
   "author": "SelfMusic Studio",
   "homepage": "https://github.com/masadzim/SelfMusic-Studio",
@@ -21,7 +21,7 @@
     "prune:ort": "node scripts/prune-onnxruntime.mjs",
     "test": "node scripts/verify-save-pipeline.cjs",
     "build:linux": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target linux --arch x64 && electron-builder --linux AppImage",
-    "build:linux:deb": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target linux --arch x64 && electron-builder --linux deb && node scripts/finalize-deb.cjs dist/selfmusic-studio_1.3.0_amd64.deb",
+    "build:linux:deb": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target linux --arch x64 && electron-builder --linux deb && node scripts/finalize-deb.cjs dist/selfmusic-studio_$(node -p \"require('./package.json').version\")_amd64.deb",
     "build:windows": "npm run prepare:assets:check:win && node scripts/prune-onnxruntime.mjs --target win32 --arch x64 && electron-builder --win nsis",
     "build:mac": "npm run build:mac:arm64",
     "build:mac:arm64": "npm run prepare:assets:check && node scripts/prune-onnxruntime.mjs --target darwin --arch arm64 && electron-builder --mac --arm64",

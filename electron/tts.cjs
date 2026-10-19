@@ -77,6 +77,20 @@ function findDataFor(binPath) {
 }
 
 /**
+ * Path of the bundled engine, relative to resources/tts.
+ *
+ * Only the last segment is a file: the Windows layout puts espeak-ng.exe
+ * straight in the platform directory, while the unix layout keeps it in bin/.
+ * Spelling both branches as one call once made Windows look for
+ * espeak/win32/espeak-ng.exe/espeak-ng.exe, which silently disables the engine.
+ */
+function bundledEngineParts(platform, arch) {
+  return platform === 'win32'
+    ? ['espeak', 'win32', 'espeak-ng.exe']
+    : ['espeak', `${platform}-${arch}`, 'bin', 'espeak-ng'];
+}
+
+/**
  * Resolve eSpeak in the order requested: user override, then a system install,
  * then the copy bundled with the app.
  */
@@ -98,8 +112,7 @@ function resolveEspeak(override) {
     if (fs.existsSync(bin)) candidates.push({ bin, data: findDataFor(bin), source: 'system' });
   }
 
-  const sub = isWin ? 'win32' : `${process.platform}-${process.arch}`;
-  const bundled = findAsset('espeak', sub, isWin ? 'espeak-ng.exe' : 'bin', isWin ? 'espeak-ng.exe' : 'espeak-ng');
+  const bundled = findAsset(...bundledEngineParts(process.platform, process.arch));
   if (bundled) candidates.push({ bin: bundled, data: findDataFor(bundled), source: 'bundled' });
 
   // A system binary with no data directory is useless; the bundled pair is
@@ -413,6 +426,7 @@ module.exports = {
   resolveEspeak,
   resolveModel,
   lengthScaleFor,
+  bundledEngineParts,
   STYLE_LENGTH_SCALE,
   MAX_OUTPUT_MB
 };
