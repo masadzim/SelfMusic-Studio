@@ -56,11 +56,15 @@ function findAsset(...parts) {
 }
 
 // espeak-ng-data sits in different places depending on distro and packaging.
-function dataDirCandidates(binDir) {
-  const parent = path.dirname(binDir);
+// The two bundled layouts disagree by one level: unix keeps the binary in
+// bin/ with the data beside that, Windows puts both in the platform directory.
+function dataDirCandidates(binPath) {
+  const dir = path.dirname(binPath);
+  const plat = path.dirname(dir);
   return [
-    path.join(parent, 'espeak-ng-data'),
-    path.join(parent, '..', 'share', 'espeak-ng-data'),
+    path.join(dir, 'espeak-ng-data'),
+    path.join(plat, 'espeak-ng-data'),
+    path.join(dir, '..', 'share', 'espeak-ng-data'),
     '/usr/share/espeak-ng-data',
     '/usr/lib/x86_64-linux-gnu/espeak-ng-data',
     '/usr/local/share/espeak-ng-data'
@@ -68,7 +72,7 @@ function dataDirCandidates(binDir) {
 }
 
 function findDataFor(binPath) {
-  for (const d of dataDirCandidates(path.dirname(binPath))) {
+  for (const d of dataDirCandidates(binPath)) {
     try {
       if (fs.statSync(d).isDirectory()) return d;
     } catch {}
@@ -427,6 +431,7 @@ module.exports = {
   resolveModel,
   lengthScaleFor,
   bundledEngineParts,
+  findDataFor,
   STYLE_LENGTH_SCALE,
   MAX_OUTPUT_MB
 };

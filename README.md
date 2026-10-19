@@ -131,6 +131,21 @@ THIRD-PARTY-NOTICES.md  # Lisensi komponen pihak ketiga
 
 ## Changelog
 
+### 1.3.2
+
+Perbaikan kedua untuk 1.3.0, ketahuan oleh smoke test Windows yang sama:
+
+- **Data kamus eSpeak tidak ditemukan di Windows.** Pencarian data selalu
+  mengasumsikan tata letak unix (`espeak/<platform>/bin/<exe>` dengan data satu
+  level di atas `bin`). Untuk Windows, `espeak-ng.exe` dan `espeak-ng-data`
+  duduk di direktori yang sama, sehingga yang dicari satu level terlalu jauh dan
+  sintesis gagal dengan "Data eSpeak NG tidak ditemukan". Sekarang kedua tata
+  letak diperiksa, dari yang paling spesifik.
+- Tes regresi baru membangun kedua tata letak di direktori sementara dan
+  memastikan data ditemukan di keduanya — kelas bug ini tidak bisa masuk lagi.
+- 1.3.1 masih ada di GitHub Releases. Yang salah di sana hanya TTS offline
+  Windows; seluruh fitur lain berfungsi seperti biasa.
+
 ### 1.3.1
 
 Perbaikan untuk rilis 1.3.0, ditemukan oleh smoke test Windows:

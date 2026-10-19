@@ -256,7 +256,30 @@ const call = payload => audioSave({}, payload);
     assert(tts.resolveEspeak(''), 'engine bawaan tidak ditemukan di mesin ini');
   });
 
-  await check('tts:status melaporkan engine dan peta length_scale', async () => {
+  await check('data eSpeak ditemukan untuk kedua tata letak bawaan', () => {
+    // unix keeps the binary in bin/ with the data beside that; Windows puts
+    // both in the platform directory. They are one level apart, and guessing
+    // wrong means the engine resolves but cannot read its dictionaries.
+    const base = fs.mkdtempSync(path.join(TMP, 'sms-layout-'));
+    const cases = [
+      ['win32', path.join(base, 'win32', 'espeak-ng.exe'), path.join(base, 'win32', 'espeak-ng-data')],
+      ['linux', path.join(base, 'linux-x64', 'bin', 'espeak-ng'), path.join(base, 'linux-x64', 'espeak-ng-data')]
+    ];
+    for (const [label, bin, data] of cases) {
+      fs.mkdirSync(path.dirname(bin), { recursive: true });
+      fs.writeFileSync(bin, '');
+      fs.mkdirSync(data, { recursive: true });
+      assert.strictEqual(tts.findDataFor(bin), data, `${label}: data tidak ditemukan di sebelah binary`);
+    }
+    // A system-wide fallback may still answer for an engine we know nothing
+    // about, but it must never invent a directory inside that engine's tree.
+    const orphan = path.join(base, 'hilang', 'espeak-ng');
+    const orphanData = tts.findDataFor(orphan);
+    assert(!orphanData || !orphanData.startsWith(path.join(base, 'hilang')),
+      `binary tanpa data menunjuk ${orphanData}`);
+  });
+
+await check('tts:status melaporkan engine dan peta length_scale', async () => {
     const st = await status({}, '');
     assert(st.ok, 'status harus ok');
     assert(['system', 'bundled', 'override'].includes(st.engine), 'engine: ' + st.engine);
