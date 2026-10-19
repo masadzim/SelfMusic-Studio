@@ -69,6 +69,7 @@
       }
     ],
     "beforePack": "./scripts/stage-tts-assets.cjs",
+    "afterPack": "./scripts/stage-tts-assets.cjs",
     "asarUnpack": [
       "**/node_modules/onnxruntime-node/bin/**"
     ],

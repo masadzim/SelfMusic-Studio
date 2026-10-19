@@ -80,6 +80,20 @@ Supported update targets:
 - Windows: NSIS installer (`.exe`)
 - Linux: AppImage
 
+## Windows smoke test
+
+`.github/workflows/windows-smoke.yml` runs on `windows-latest` and verifies the
+parts that cannot be proven from Linux: it downloads the published installer,
+installs it silently, runs the bundled `espeak-ng.exe` (with the MSVC runtime
+next to it), synthesises a real sentence through eSpeak + Piper + ONNX using the
+files the installer actually wrote, checks the licence texts inside `app.asar`,
+and confirms `latest.yml` / `latest-linux.yml` name assets that really exist on
+the release — a mismatch there makes auto-update 404 for every user.
+
+It runs on `release: published`, and can be started by hand from the Actions
+tab (optionally against a specific tag). The repo is public, so the standard
+runner costs nothing.
+
 ## Releasing
 
 Publishing requires a GitHub token with `repo` scope in `GH_TOKEN`:

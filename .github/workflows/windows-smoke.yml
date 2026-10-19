@@ -1,0 +1,136 @@
+name: Windows smoke test
+
+# The offline voice is the one feature that cannot be proven from Linux: the
+# Windows espeak-ng.exe has to load on a real machine, with the MSVC runtime
+# sitting next to it, and Piper has to run the model there too. Wine is a good
+# approximation, not the same thing.
+#
+# Public repository, so the standard GitHub-hosted runner is free.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test (blank = latest release)
+        required: false
+        default: ''
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Installer + offline TTS on Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      INSTALL_DIR: C:\sms
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download the published installer
+        shell: pwsh
+        run: |
+          $args = @('release', 'download', '--pattern', '*Setup*.exe', '--dir', 'dist', '--clobber')
+          if ('${{ inputs.tag }}') { $args += '${{ inputs.tag }}' }
+          & gh @args
+          if ($LASTEXITCODE -ne 0) { throw 'gagal mengunduh installer' }
+          Get-ChildItem dist\*Setup*.exe | Select-Object Name, Length
+
+      - name: Install silently
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem dist\*Setup*.exe).FullName
+          # /S = silent, /D = destination and must come last, unquoted.
+          Start-Process -FilePath $installer -ArgumentList '/S', "/D=$env:INSTALL_DIR" -Wait
+          if (-not (Test-Path "$env:INSTALL_DIR\SelfMusic Studio.exe")) {
+            throw "installer tidak menghasilkan aplikasi di $env:INSTALL_DIR"
+          }
+          Get-ChildItem "$env:INSTALL_DIR" | Select-Object -ExpandProperty Name
+
+      - name: eSpeak runs, with the bundled MSVC runtime
+        shell: pwsh
+        run: |
+          $root = "$env:INSTALL_DIR\resources\tts\espeak\win32"
+          $exe  = "$root\espeak-ng.exe"
+          if (-not (Test-Path $exe)) { throw "espeak-ng.exe tidak ada di paket" }
+          foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
+            if (-not (Test-Path "$root\$dll")) { throw "runtime MSVC $dll tidak ikut terpasang" }
+          }
+          # Only the Windows engine may ship: the others would be dead weight.
+          $engines = (Get-ChildItem "$env:INSTALL_DIR\resources\tts\espeak" -Directory).Name
+          if ($engines.Count -ne 1 -or $engines[0] -ne 'win32') {
+            throw "paket membawa engine asing: $($engines -join ', ')"
+          }
+
+          $data = "$root\espeak-ng-data"
+          $voices = & $exe --path $data --voices=id
+          if ($LASTEXITCODE -ne 0) { throw "espeak-ng --voices gagal (exit $LASTEXITCODE)" }
+          if ($voices -notmatch 'Indonesian') { throw "daftar suara tidak memuat Indonesian:`n$voices" }
+
+          # Exactly how electron/tts.cjs calls it: text on stdin, no -f.
+          $ipa = 'Halo dunia, selamat pagi!' | & $exe --path $data -v id -q --ipa=2
+          if ($LASTEXITCODE -ne 0) { throw "fonemisasi gagal (exit $LASTEXITCODE)" }
+          if (-not $ipa) { throw 'tidak ada fonem yang dihasilkan' }
+          if ($ipa -notmatch '[\u02c8\u02d0]') { throw "fonem tanpa tanda stress: $ipa" }
+          "fonem Indonesia: $ipa"
+
+      - name: End-to-end synthesis with the shipped assets
+        shell: pwsh
+        run: |
+          # Test the bytes the installer put on disk, not a fresh download.
+          Copy-Item -Recurse -Force "$env:INSTALL_DIR\resources\tts" 'resources\tts'
+          npm ci --omit=dev
+          npm test
+
+      - name: Package contains the licence texts
+        shell: pwsh
+        run: |
+          $asar = "$env:INSTALL_DIR\resources\app.asar"
+          if (-not (Test-Path $asar)) { throw 'app.asar tidak ada' }
+          npx --yes @electron/asar list $asar > asar-list.txt
+          $needed = '/COPYING', '/LICENSE', '/COPYRIGHT-NOTICE.txt',
+                    '/THIRD-PARTY-NOTICES.md', '/electron/tts.cjs', '/resources/license.txt'
+          foreach ($entry in $needed) {
+            if (-not (Select-String -Path asar-list.txt -SimpleMatch $entry -Quiet)) {
+              throw "app.asar tidak memuat $entry"
+            }
+          }
+          'semua teks lisensi ada di app.asar'
+
+      - name: Update metadata points at assets that really exist
+        shell: pwsh
+        run: |
+          # A mismatch here means auto-update 404s for every user.
+          & gh release download --pattern 'latest*.yml' --dir dist --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'metadata update tidak ada di rilis' }
+          $assets = (& gh release view --json assets | ConvertFrom-Json).assets.name
+          foreach ($file in 'dist/latest.yml', 'dist/latest-linux.yml') {
+            $name = (Select-String -Path $file -Pattern '^path: (.+)$').Matches.Groups[1].Value
+            if (-not $name) { throw "$file tidak menyebut path berkas" }
+            if ($assets -notcontains $name) {
+              throw "$file menunjuk '$name' tapi aset itu tidak ada di rilis. Aset: $($assets -join ', ')"
+            }
+            "  $($file.Split('/')[-1]) -> $name  OK"
+          }
+
+      - name: Installed app starts
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          # A runner has no interactive desktop, so this is a smoke signal, not
+          # a guarantee: a GUI-only crash would slip through here.
+          $app = Start-Process "$env:INSTALL_DIR\SelfMusic Studio.exe" -PassThru
+          Start-Sleep -Seconds 20
+          if ($app.HasExited) { throw "aplikasi langsung keluar (kode $($app.ExitCode))" }
+          Stop-Process -Id $app.Id -Force
+          'aplikasi masih hidup setelah 20 detik'

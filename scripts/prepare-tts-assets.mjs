@@ -286,6 +286,12 @@ function relocateMachO(file, prefix) {
 
 /** Lay an MSI out on disk. Returns false when no extractor is available. */
 function unpackMsi(msi, out, tmp) {
+  // Windows already ships the extractor we need.
+  if (process.platform === 'win32') {
+    spawnSync('msiexec', ['/a', msi, `TARGETDIR=${out}`, '/qn'], { encoding: 'utf8', timeout: 300000, windowsHide: true });
+    return existsSync(out);
+  }
+
   if (spawnSync('msiextract', ['-C', out, msi], { encoding: 'utf8' }).status === 0) {
     return existsSync(out);
   }
@@ -304,6 +310,21 @@ function unpackMsi(msi, out, tmp) {
   return r.status === 0 && existsSync(out);
 }
 
+/** Unpack a zip. Uses the system `unzip`, or PowerShell where there is none. */
+function unzipInto(archive, dest) {
+  if (process.platform === 'win32') {
+    const ps = spawnSync(
+      'powershell',
+      ['-NoProfile', '-Command', `Expand-Archive -LiteralPath '${archive}' -DestinationPath '${dest}' -Force`],
+      { encoding: 'utf8', timeout: 300000, windowsHide: true }
+    );
+    return ps.status === 0;
+  }
+  const r = spawnSync('unzip', ['-q', '-o', archive, '-d', dest], { encoding: 'utf8' });
+  if (r.status !== 0) throw new Error('unzip gagal: ' + (r.stderr || '').trim());
+  return true;
+}
+
 /** Copy the MSVC runtime DLLs next to espeak-ng.exe. */
 async function fetchVCRuntime(tmp, dest) {
   const meta = await (await fetch(MSVC_RUNTIME_PYPI, { redirect: 'follow' })).json();
@@ -316,8 +337,7 @@ async function fetchVCRuntime(tmp, dest) {
 
   const vc = path.join(tmp, 'vc');
   mkdirSync(vc, { recursive: true });
-  const r = spawnSync('unzip', ['-q', '-o', whl, '-d', vc], { encoding: 'utf8' });
-  if (r.status !== 0) throw new Error('unzip gagal: ' + (r.stderr || '').trim());
+  unzipInto(whl, vc);
 
   for (const name of VC_DLLS) {
     let src = null;
