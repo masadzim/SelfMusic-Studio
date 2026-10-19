@@ -1,5 +1,8 @@
 # SelfMusic Studio
 
+![Windows smoke test](https://github.com/masadzim/SelfMusic-Studio/actions/workflows/windows-smoke.yml/badge.svg)
+![Latest release](https://img.shields.io/github/v/release/masadzim/SelfMusic-Studio?display_name=tag)
+
 Aplikasi desktop untuk membuat musik AI dengan **SunoAPI.org** dan **KIE.AI**.
 Dibangun dengan Electron dan membungkus antarmuka web `SelfMusic-Studio.html`
 menjadi aplikasi Windows dan Linux dengan auto-update.
