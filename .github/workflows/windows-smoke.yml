@@ -109,22 +109,11 @@ jobs:
 
       - name: End-to-end synthesis with the shipped assets
         run: |
-          # Test the bytes the installer put on disk, not a fresh download.
-          cp -r "$INSTALL_MOUNT/resources/tts" resources/tts
-          ls -la resources/tts resources/tts/espeak
-          node -e '
-            const fs = require("node:fs"), path = require("node:path");
-            const t = require("./electron/tts.cjs");
-            console.log("platform   :", process.platform, process.arch);
-            console.log("__dirname  :", __dirname);
-            for (const root of [path.join(process.resourcesPath || "", "tts"), path.join(__dirname, "resources", "tts")]) {
-              console.log("akar       :", root, fs.existsSync(root) ? "ada" : "HILANG");
-            }
-            console.log("espeak     :", JSON.stringify(t.resolveEspeak("")));
-            console.log("model      :", t.resolveModel() || "HILANG");
-          '
+          ls -la "$ENGINE_MOUNT"
           npm ci --omit=dev
-          npm test
+          # Point the tests at the installation itself, so what is verified is
+          # the exact files the installer put on disk -- no copying involved.
+          SMS_RESOURCES_PATH="$INSTALL_DIR\\resources" npm test
 
       - name: Package contains the licence texts
         run: |

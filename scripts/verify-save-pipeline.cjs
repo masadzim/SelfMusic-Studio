@@ -69,6 +69,13 @@ Module._load = origLoad;
 const audioSave = handlers.get('audio:save');
 assert(audioSave, 'IPC audio:save tidak terdaftar');
 
+// Tests normally read the assets from the checkout. CI instead points them at a
+// real installation (SMS_RESOURCES_PATH = <install>\resources) so the test runs
+// against the exact files an end user would have on disk.
+if (process.env.SMS_RESOURCES_PATH) {
+  process.resourcesPath = process.env.SMS_RESOURCES_PATH;
+}
+
 const tts = require(path.join(ROOT, 'electron', 'tts.cjs'));
 
 let pass = 0;
