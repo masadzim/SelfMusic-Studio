@@ -196,6 +196,11 @@ const call = payload => audioSave({}, payload);
     assert(r.ok, 'harus ok: ' + r.error);
     assert(r.voices.length >= 1, 'minimal satu suara');
     assert(r.voices[0].lang === 'id', 'bahasa harus id');
+    // eSpeak happily lists its built-in mbrola voices, but they shell out to a
+    // phoneme synthesizer we do not ship, so they must not reach the dropdown.
+    assert.strictEqual(r.voices.length, 1, `hanya satu suara, dapat: ${r.voices.map(v => v.name).join(', ')}`);
+    assert(!/mbrola/i.test(JSON.stringify(r.voices)), 'suara mbrola tidak boleh ikut');
+    assert.strictEqual(r.voices[0].name, 'Bahasa Indonesia');
   });
 
   await check('tts:synth menolak naskah kosong', async () => {

@@ -95,9 +95,8 @@ jobs:
 
           voices=$("$exe" --path "$ENGINE_MOUNT/espeak-ng-data" --voices=id)
           echo "$voices" | grep -q Indonesian || { echo "::error::daftar suara tidak memuat Indonesian"; echo "$voices"; exit 1; }
-          if echo "$voices" | grep -qi mbrola; then
-            echo "::error::suara mbrola ikut terpasang"; echo "$voices"; exit 1
-          fi
+          # eSpeak listing its built-in mbrola voices is expected; dropping them
+          # is the app's job, and `npm test` below is what checks that.
 
           # Exactly how electron/tts.cjs calls it: text on stdin, no -f.
           ipa=$(printf 'Halo dunia, selamat pagi!\n' | "$exe" --path "$ENGINE_MOUNT/espeak-ng-data" -v id -q --ipa=2)
