@@ -30,12 +30,20 @@ jobs:
   windows:
     name: Installer + offline TTS on Windows
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     defaults:
       run:
         shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
+      # MSYS rewrites arguments that look like unix paths, so /S and /D= would
+      # reach the installer as "S:/..." and "D=C:/..." -- it would then show a
+      # GUI and hang forever on a runner with no desktop. Off, and the Windows
+      # tools below get single-slash switches; bash still sees /c/sms paths for
+      # its own file operations, but any path handed to a Windows executable has
+      # to be written Windows-style.
+      MSYS_NO_PATHCONV: '1'
+      MSYS2_ARG_CONV_EXCL: '*'
       # MSYS path for the bash shell, Windows path for the tools it calls.
       INSTALL_DIR: 'C:\sms'
       INSTALL_MOUNT: /c/sms
@@ -59,9 +67,13 @@ jobs:
 
       - name: Install silently
         run: |
-          # NSIS: /S = silent, /D = destination and must come last.
-          # start //wait so the shell does not race the installer.
-          cmd //c start //wait "" "dist\\$(ls dist | grep 'Setup' | head -1)" /S /D=C:/sms
+          installer="dist\\$(ls dist | grep 'Setup' | head -1)"
+          echo "menjalankan: cmd /c start /wait \"\" \"$installer\" /S /D=C:/sms"
+          # start /wait so the shell does not race the installer.
+          if ! timeout 420 cmd /c start /wait "" "$installer" /S /D=C:/sms; then
+            echo "::error::installer tidak selesai dalam 7 menit"
+            exit 1
+          fi
           if [ ! -f "$INSTALL_MOUNT/SelfMusic Studio.exe" ]; then
             echo "::error::installer tidak menghasilkan aplikasi di $INSTALL_MOUNT"
             ls -la "$INSTALL_MOUNT" || true
@@ -100,8 +112,9 @@ jobs:
 
       - name: Package contains the licence texts
         run: |
-          asar="$INSTALL_MOUNT/resources/app.asar"
-          [ -f "$asar" ] || { echo "::error::app.asar tidak ada"; exit 1; }
+          # A path handed to a Windows executable has to be Windows-style here.
+          asar="$INSTALL_DIR\\resources\\app.asar"
+          [ -f "$INSTALL_MOUNT/resources/app.asar" ] || { echo "::error::app.asar tidak ada"; exit 1; }
           npx --yes @electron/asar list "$asar" > asar-list.txt
           for entry in /COPYING /LICENSE /COPYRIGHT-NOTICE.txt /THIRD-PARTY-NOTICES.md \
                        /electron/tts.cjs /resources/license.txt; do
@@ -132,9 +145,9 @@ jobs:
           # a guarantee: a GUI-only crash would slip through here.
           "$INSTALL_MOUNT/SelfMusic Studio.exe" &
           sleep 20
-          if ! tasklist //FI "IM eq SelfMusic Studio.exe" //NH | grep -qi "SelfMusic"; then
+          if ! tasklist /FI "IM eq SelfMusic Studio.exe" /NH | grep -qi "SelfMusic"; then
             echo "::warning::aplikasi sudah tidak berjalan setelah 20 detik"
             exit 1
           fi
-          taskkill //IM "SelfMusic Studio.exe" //F || true
+          taskkill /IM "SelfMusic Studio.exe" /F || true
           echo "aplikasi masih hidup setelah 20 detik"
