@@ -55,6 +55,37 @@ npm run prepare:assets   # unduh model Piper + eSpeak NG (~84 MB, sekali saja)
 npm start
 ```
 
+### Catatan Linux: sandbox Chromium
+
+Di Linux, Chromium menjalankan renderer di dalam sandbox yang butuh salah satu
+dari dua hal: berkas `chrome-sandbox` milik root dengan mode `4755`, atau
+*unprivileged user namespace* sebagai cadangan. `npm install` tidak memasang bit
+SUID, dan distro seperti Ubuntu 24.04 membatasi user namespace lewat AppArmor
+(`kernel.apparmor_restrict_unprivileged_userns=1`), sehingga `npm start`
+berhenti dengan:
+
+```
+FATAL: ... The SUID sandbox helper binary was found, but is not configured
+correctly. Rather than run without sandboxing I'm aborting now.
+```
+
+Pilih salah satu:
+
+```sh
+# 1. beri hak SUID pada helper bawaan Electron (sekali saja, butuh sudo)
+sudo chown root:root node_modules/electron/dist/chrome-sandbox
+sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
+# 2. jalankan tanpa sandbox, khusus development
+npx electron . --no-sandbox
+```
+
+Ini kondisi lingkungan, bukan bug aplikasi, dan tidak ada hubungannya dengan
+kode di repo: `node_modules/` diabaikan Git, jadi kontributor lain tidak
+terpengaruh. Untuk pengguna, AppImage di distro yang membatasi user namespace
+dengan cara yang sama juga bisa meminta `--no-sandbox`; aplikasi sendiri tidak
+boleh mematikannya secara default karena itu melemahkan sandbox semua orang.
+
 ## Build
 
 ```sh
@@ -133,6 +164,26 @@ THIRD-PARTY-NOTICES.md  # Lisensi komponen pihak ketiga
 ```
 
 ## Changelog
+
+### 1.3.3
+
+Perbaikan bug pada modul suara dan catatan menjalankan di Linux:
+
+- **Perbaikan: `ReferenceError: keep is not defined` setiap kali menu
+  `Buat suara` dibuka untuk penyedia API.** `refreshVoices()` mendeklarasikan
+  `const keep=sel.value` di dalam blok `if(p==='device')`, lalu memakainya di
+  baris terakhir yang berada di luar blok itu. Untuk penyedia selain suara
+  perangkat, nama `keep` tidak ada dan fungsi berhenti dengan exception.
+  Daftar suara tetap terisi karena `innerHTML` sudah dipasang lebih dulu, tapi
+  pilihan suara tidak lagi dipertahankan saat berpindah penyedia atau kembali
+  ke menu ini, dan setiap pemanggilan meninggalkan *unhandled rejection* di
+  konsol — termasuk saat halaman dibuka lewat navigasi. Deklarasinya sekarang
+  dipindah ke awal fungsi, jadi satu variabel dipakai kedua cabang.
+- **README: catatan sandbox Chromium di Linux.** `npm start` gagal dengan
+  pesan SUID sandbox pada distro yang membatasi user namespace (mis. Ubuntu
+  24.04), karena `npm install` memang tidak memasang bit SUID. Dijelaskan dua
+  jalan keluarnya, plus penegasan bahwa ini kondisi lingkungan dan bukan bug
+  aplikasi.
 
 ### 1.3.2
 

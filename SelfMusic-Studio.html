@@ -1242,9 +1242,9 @@ function applyProv(){
 async function refreshVoices(){
   const p=vprov,ad=VOICE[p];
   const sel=$('#vo-voice');if(!sel)return;
+  const keep=sel.value;
   let groups=[];
   if(p==='device'){
-    const keep=sel.value;
     if(DEVICE_ENGINE){
       sel.innerHTML='<option value="">Memuat suara perangkat…</option>';
       let res=null;
